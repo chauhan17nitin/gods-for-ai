@@ -1,13 +1,16 @@
 // The match engine.
 //
-// For now this is a MOCK: each god is a hand-written temperament that picks
-// moves and says a canned line. Later the API replaces `MockBrain` and the UI
-// does not change, as long as `next()` keeps returning a turn in this shape:
+// LIVE games (see `LIVE` below) ask the backend for each god's move; the
+// backend loads the god's skill and calls Gemini. All other games are still a
+// MOCK: hand-written temperaments and canned lines.
+//
+// Either way, `next()` returns (or resolves to) a turn in this shape:
 //
 //   {
 //     round: 3,
 //     left:  { move: "betray", label: "BETRAY", line: "..." },
 //     right: { move: "cooperate", label: "COOPERATE", line: "..." },
+//     (move values differ per game; the UI only displays label and line)
 //     outcome: { text: "BETRAYAL", tone: "betrayal" | "harmony" | "clash" | "neutral" },
 //     delta: [5, 0],   // points this round
 //     scores: [14, 9], // running totals
@@ -85,37 +88,6 @@ window.Engine = (() => {
   // L and R are god ids; state carries history.
 
   const RULES = {
-    "prisoners-dilemma": (s, L, R) => {
-      const choose = (me, them, myHist, theirHist) => {
-        const last = theirHist[theirHist.length - 1];
-        const prevMine = myHist[myHist.length - 1];
-        if (me === "null") {
-          if (s.round === 1) return chance(0.4) ? ["C", "coop"] : ["D", "defect"];
-          return chance(0.8) ? ["D", last === "D" ? "retaliate" : "defect"] : ["C", "coop"];
-        }
-        if (me === "karma") {
-          if (!last) return ["C", "coop"];
-          if (last === "D") return ["D", "retaliate"];
-          return ["C", prevMine === "D" ? "forgive" : "coop"];
-        }
-        if (!last) return ["C", "coop"];
-        if (last === "D") return chance(0.6) ? ["D", "retaliate"] : ["C", "forgive"];
-        return chance(0.9) ? ["C", "coop"] : ["D", "defect"];
-      };
-      const [a, ka] = choose(L, R, s.hist[0], s.hist[1]);
-      const [b, kb] = choose(R, L, s.hist[1], s.hist[0]);
-      s.hist[0].push(a); s.hist[1].push(b);
-      const pay = { CC: [3, 3], CD: [0, 5], DC: [5, 0], DD: [1, 1] }[a + b];
-      const lab = (m) => (m === "C" ? "COOPERATE" : "BETRAY");
-      const tone = a + b === "CC" ? "harmony" : a + b === "DD" ? "clash" : "betrayal";
-      const text = { harmony: "TRUST HOLDS", clash: "MUTUAL RUIN", betrayal: "BETRAYAL" }[tone];
-      return {
-        left: { move: a, label: lab(a), line: say(L, ka) },
-        right: { move: b, label: lab(b), line: say(R, kb) },
-        outcome: { text, tone }, delta: pay,
-      };
-    },
-
     "split-steal": (s, L, R) => {
       const pot = 100;
       const choose = (me, theirHist) => {
@@ -256,7 +228,73 @@ window.Engine = (() => {
     },
   };
 
+  // ---------- Live games: each god's move comes from the backend (Gemini) ----------
+
+  const LIVE = {
+    "prisoners-dilemma": {
+      label: (m) => (m === "cooperate" ? "COOPERATE" : "BETRAY"),
+      resolve(a, b) {
+        const key = `${a},${b}`;
+        const delta = { "cooperate,cooperate": [3, 3], "cooperate,betray": [0, 5], "betray,cooperate": [5, 0], "betray,betray": [1, 1] }[key];
+        const tone = a === b ? (a === "cooperate" ? "harmony" : "clash") : "betrayal";
+        const text = { harmony: "TRUST HOLDS", clash: "MUTUAL RUIN", betrayal: "BETRAYAL" }[tone];
+        return { delta, outcome: { text, tone } };
+      },
+    },
+  };
+
+  async function askGod(game, god, round, totalRounds, history) {
+    let res;
+    try {
+      res = await fetch("/api/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ game: game.id, god: god.id, round, totalRounds, history }),
+      });
+    } catch {
+      throw new Error("Cannot reach the Arena server. Start it with: npm start");
+    }
+    const data = await res.json().catch(() => ({}));
+    if ((res.status === 404 || res.status === 405) && !data.error) {
+      throw new Error("This page isn't served by the Arena server, so there is no /api/move here. Run npm start in arena/ and open http://localhost:4173");
+    }
+    if (!res.ok) throw new Error(`${god.name}: ${data.error || `HTTP ${res.status}`}`);
+    return data;
+  }
+
+  function createLive(game, leftGod, rightGod) {
+    const rules = LIVE[game.id];
+    const state = { round: 0, maxRounds: game.rounds, hist: [], scores: [0, 0] };
+    // Each god sees the history from its own side: "you" is itself.
+    const historyFor = (side) => state.hist.map((h) => ({ you: h[side], opponent: h[1 - side] }));
+    return {
+      live: true,
+      state,
+      async next() {
+        const round = state.round + 1;
+        // Both gods are asked at the same time; neither sees the other's move.
+        const [a, b] = await Promise.all([
+          askGod(game, leftGod, round, state.maxRounds, historyFor(0)),
+          askGod(game, rightGod, round, state.maxRounds, historyFor(1)),
+        ]);
+        state.round = round;
+        state.hist.push([a.move, b.move]);
+        const { delta, outcome } = rules.resolve(a.move, b.move);
+        state.scores = [state.scores[0] + delta[0], state.scores[1] + delta[1]];
+        return {
+          round,
+          left: { move: a.move, label: rules.label(a.move), line: a.line },
+          right: { move: b.move, label: rules.label(b.move), line: b.line },
+          outcome, delta,
+          scores: [...state.scores],
+          done: round >= state.maxRounds,
+        };
+      },
+    };
+  }
+
   function create(game, leftGod, rightGod) {
+    if (LIVE[game.id]) return createLive(game, leftGod, rightGod);
     const rule = RULES[game.id];
     const state = { round: 0, maxRounds: game.rounds, hist: [[], []], scores: [0, 0] };
     return {
@@ -274,5 +312,9 @@ window.Engine = (() => {
     };
   }
 
-  return { create, isPlayable: (game) => !!RULES[game.id] && game.status === "ready" };
+  return {
+    create,
+    isPlayable: (game) => !!(RULES[game.id] || LIVE[game.id]) && game.status === "ready",
+    isLive: (game) => !!LIVE[game.id],
+  };
 })();

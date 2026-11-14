@@ -43,6 +43,7 @@
       return `
         <button class="game-card ${sealed ? "sealed" : ""}" data-game="${g.id}" style="--i:${i}" ${sealed ? 'aria-disabled="true"' : ""}>
           <span class="game-glyph">${ART.glyph(g.glyph)}</span>
+          <span class="game-badge ${Engine.isLive(g) ? "live" : ""}">${sealed ? "" : Engine.isLive(g) ? "● Live AI" : "Demo"}</span>
           <span class="game-name">${g.name}</span>
           <span class="game-tag">${g.tagline}</span>
           <span class="game-blurb">${g.blurb}</span>
@@ -285,6 +286,8 @@
     $("#hud-left").innerHTML = hudSide(L, 0);
     $("#hud-right").innerHTML = hudSide(R, 1);
     $("#hud-game").textContent = game.name;
+    $(".demo-tag").textContent = match.live ? "Live · gods played by Gemini" : "Demo · simulated gods";
+    $(".demo-tag").classList.toggle("live", !!match.live);
     $("#hud-round").textContent = "ROUND 1";
     $("#hud-progress").style.width = "0%";
     $("#deity-left .sigil").innerHTML = ART.sigil(L.sigil);
@@ -300,14 +303,54 @@
       await intro(L, R, run);
       let turn;
       do {
-        turn = await match.next(); // await, so an API-backed engine can drop in
+        await waitForStrike(match.state.round + 1, run); // the player starts each round
+        if (match.live) deliberate(match.state.round + 1);
+        turn = await match.next(); // live games wait here for both gods
+        if (run !== app.run) return; // left the battle while waiting
         await playTurn(turn, L, R, run);
       } while (!turn.done);
       await sleep(900, run);
       verdict(L, R, turn.scores);
     } catch (e) {
-      if (e.message !== "cancelled") throw e;
+      if (e.message === "cancelled" || run !== app.run) return;
+      silence(e.message);
     }
+  }
+
+  // Waits for the player to click "Next Round" (or press Enter).
+  let strike = null;
+  function waitForStrike(round, run) {
+    const box = $("#strike");
+    $("#strike-btn span").textContent = round === 1 ? "Begin Round 1" : `Next Round · ${round}`;
+    box.hidden = false;
+    return new Promise((resolve, reject) => {
+      const done = (fn) => { clearInterval(watch); strike = null; box.hidden = true; fn(); };
+      // Stop waiting if the player leaves or restarts the battle.
+      const watch = setInterval(() => { if (run !== app.run) done(() => reject(new Error("cancelled"))); }, 150);
+      strike = () => done(resolve);
+    });
+  }
+  $("#strike-btn").addEventListener("click", () => strike?.());
+
+  // While both gods are thinking (live games).
+  function deliberate(round) {
+    resetClash();
+    $("#hud-round").textContent = `ROUND ${round}`;
+    $("#deity-left").classList.add("charging");
+    $("#deity-right").classList.add("charging");
+    $("#clash-core").classList.add("thinking");
+    $("#outcome").textContent = "";
+    $("#delta").textContent = "the gods deliberate…";
+  }
+
+  // When the backend fails: stop the match and say why.
+  function silence(message) {
+    resetClash();
+    $("#clash-core").classList.add("on", "t-clash");
+    $("#outcome").textContent = "THE GODS ARE SILENT";
+    $("#delta").textContent = message;
+    $("#delta").classList.add("error");
+    console.error("[arena]", message);
   }
 
   function resetClash() {
@@ -315,6 +358,7 @@
     $("#move-right").className = "move-card move-right";
     $("#outcome").textContent = "";
     $("#delta").textContent = "";
+    $("#delta").className = "delta";
     $("#clash-core").className = "clash-core";
     $("#speech-left").className = "speech";
     $("#speech-right").className = "speech";
@@ -423,6 +467,7 @@
   addEventListener("keydown", (e) => {
     const cur = $(".screen.active")?.id;
     if (e.key === "Enter" && cur === "screen-title") $("#enter-btn").click();
+    if (e.key === "Enter" && cur === "screen-battle" && strike) { e.preventDefault(); strike(); }
     if (e.key === "Escape") {
       if (cur === "screen-battle") show("select");
       else if (cur === "screen-select") show("games");

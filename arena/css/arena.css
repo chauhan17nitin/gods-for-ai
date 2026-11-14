@@ -377,7 +377,7 @@ kbd {
 .move-card span { font-family: var(--display); font-weight: 900; letter-spacing: 0.12em; font-size: 1.15rem; border: 2px solid; background: rgba(5, 3, 15, 0.9); }
 .move-left span { color: var(--lc); border-color: var(--lc); box-shadow: 0 0 30px -4px var(--lc), inset 0 0 20px -8px var(--lc); }
 .move-right span { color: var(--rc); border-color: var(--rc); box-shadow: 0 0 30px -4px var(--rc), inset 0 0 20px -8px var(--rc); }
-.move-card.flip.mv-D span, .move-card.flip.mv-steal span, .move-card.flip.mv-straight span, .move-card.flip.mv-reject span {
+.move-card.flip.mv-D span, .move-card.flip.mv-betray span, .move-card.flip.mv-steal span, .move-card.flip.mv-straight span, .move-card.flip.mv-reject span {
   background: radial-gradient(circle, rgba(255, 40, 40, 0.35), rgba(5, 3, 15, 0.9) 70%); text-shadow: 0 0 12px currentColor;
 }
 .move-card.mv-wait span { opacity: 0.55; font-size: 0.9rem; }
@@ -529,3 +529,27 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* ---------- live AI ---------- */
+.game-badge {
+  position: absolute; top: 18px; right: 18px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--dim);
+}
+.game-badge.live { color: #5dffb0; text-shadow: 0 0 10px #5dffb0; animation: live-blink 2s ease-in-out infinite; }
+@keyframes live-blink { 50% { opacity: 0.55; } }
+.demo-tag.live { color: #5dffb0; }
+
+.clash-core.thinking .delta {
+  opacity: 1; font-family: var(--serif); font-size: 0.95rem; font-weight: 500; font-style: italic; letter-spacing: 0.2em;
+  color: var(--muted); animation: live-blink 1.4s ease-in-out infinite;
+}
+.delta.error {
+  opacity: 1; max-width: 340px; text-align: center; font-family: var(--sans); font-weight: 500; font-size: 0.85rem;
+  line-height: 1.4; color: #ffb3b3;
+}
+
+/* ---------- next round ---------- */
+[hidden] { display: none !important; }
+.clash { grid-template-rows: 1fr auto auto auto; grid-template-areas: ". ." "ml mr" "core core" "strike strike"; }
+.strike { grid-area: strike; display: flex; flex-direction: column; align-items: center; gap: 8px; animation: fade-up 0.4s var(--ease); }
+.btn-strike { padding: 14px 30px; font-size: 0.85rem; animation: portal-pulse 1.6s ease-in-out infinite; }
