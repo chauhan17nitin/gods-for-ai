@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Arena · gods-for-ai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/arena.css" />
+</head>
+<body>
+  <canvas id="cosmos" aria-hidden="true"></canvas>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <main id="app">
+    <!-- 1. TITLE -->
+    <section class="screen active" id="screen-title">
+      <div class="title-wrap">
+        <p class="kicker">gods-for-ai presents</p>
+        <h1 class="logo">
+          <span class="logo-the">THE</span>
+          <span class="logo-main" data-text="ARENA">ARENA</span>
+        </h1>
+        <p class="subtitle">Where the gods of AI play for keeps.</p>
+        <button class="btn btn-portal" id="enter-btn">
+          <span>Enter the Multiverse</span>
+        </button>
+        <p class="hint">press <kbd>Enter</kbd></p>
+      </div>
+      <div class="orbit orbit-1" aria-hidden="true"></div>
+      <div class="orbit orbit-2" aria-hidden="true"></div>
+      <div class="orbit orbit-3" aria-hidden="true"></div>
+    </section>
+
+    <!-- 2. GAME SELECT -->
+    <section class="screen" id="screen-games">
+      <header class="screen-head">
+        <button class="btn-ghost" data-back="title">← Back</button>
+        <div>
+          <p class="kicker">Step I</p>
+          <h2 class="heading">Choose the Trial</h2>
+        </div>
+        <span class="head-spacer"></span>
+      </header>
+      <div class="game-grid" id="game-grid"></div>
+    </section>
+
+    <!-- 3. GOD SELECT -->
+    <section class="screen" id="screen-select">
+      <header class="screen-head">
+        <button class="btn-ghost" data-back="games">← Trials</button>
+        <div>
+          <p class="kicker">Step II · <span id="select-game-name"></span></p>
+          <h2 class="heading">Summon Two Gods</h2>
+        </div>
+        <span class="head-spacer"></span>
+      </header>
+
+      <div class="select-stage">
+        <article class="champion" id="champ-left" data-side="0"></article>
+
+        <div class="select-center">
+          <div class="vs-emblem" aria-hidden="true"><span>VS</span></div>
+          <div class="roster" id="roster"></div>
+          <p class="roster-hint" id="roster-hint">Choose the god for the <b>left</b> realm</p>
+          <button class="btn btn-begin" id="begin-btn" disabled>
+            <span>Begin the Trial</span>
+          </button>
+        </div>
+
+        <article class="champion" id="champ-right" data-side="1"></article>
+      </div>
+    </section>
+
+    <!-- 4. BATTLE -->
+    <section class="screen" id="screen-battle">
+      <div class="hud">
+        <div class="hud-side hud-left" id="hud-left"></div>
+        <div class="hud-center">
+          <p class="hud-game" id="hud-game"></p>
+          <p class="hud-round" id="hud-round">ROUND 1</p>
+          <div class="hud-progress"><i id="hud-progress"></i></div>
+        </div>
+        <div class="hud-side hud-right" id="hud-right"></div>
+      </div>
+
+      <div class="arena-stage">
+        <div class="deity deity-left" id="deity-left">
+          <div class="aura"></div>
+          <div class="sigil"></div>
+          <div class="speech" id="speech-left"></div>
+        </div>
+
+        <div class="clash">
+          <div class="move-card move-left" id="move-left"><span></span></div>
+          <div class="clash-core" id="clash-core">
+            <svg class="bolt" viewBox="0 0 100 300" preserveAspectRatio="none" aria-hidden="true"><polyline id="bolt-line" points="" /></svg>
+            <p class="outcome" id="outcome"></p>
+            <p class="delta" id="delta"></p>
+          </div>
+          <div class="move-card move-right" id="move-right"><span></span></div>
+        </div>
+
+        <div class="deity deity-right" id="deity-right">
+          <div class="aura"></div>
+          <div class="sigil"></div>
+          <div class="speech" id="speech-right"></div>
+        </div>
+      </div>
+
+      <div class="battle-foot">
+        <div class="chronicle">
+          <p class="chronicle-title">The Chronicle</p>
+          <ol id="chronicle"></ol>
+        </div>
+        <div class="controls">
+          <button class="btn-ctl" id="ctl-play" title="Pause / play (Space)">❚❚</button>
+          <button class="btn-ctl" id="ctl-speed" title="Speed">1×</button>
+          <button class="btn-ctl" id="ctl-restart" title="Restart">↻</button>
+          <button class="btn-ctl" id="ctl-exit" title="Leave the arena (Esc)">✕</button>
+        </div>
+      </div>
+
+      <p class="demo-tag">Demo · simulated gods</p>
+
+      <!-- Intro cinematic -->
+      <div class="intro" id="intro" aria-hidden="true">
+        <div class="intro-half intro-left" id="intro-left"></div>
+        <div class="intro-half intro-right" id="intro-right"></div>
+        <div class="intro-vs">VS</div>
+        <div class="intro-crack"></div>
+        <p class="intro-call" id="intro-call"></p>
+      </div>
+
+      <!-- Verdict -->
+      <div class="verdict" id="verdict">
+        <div class="verdict-inner">
+          <p class="kicker">The trial is ended</p>
+          <div class="verdict-sigil" id="verdict-sigil"></div>
+          <h2 class="verdict-title" id="verdict-title"></h2>
+          <p class="verdict-sub" id="verdict-sub"></p>
+          <div class="verdict-scores" id="verdict-scores"></div>
+          <div class="verdict-actions">
+            <button class="btn" id="rematch-btn"><span>Rematch</span></button>
+            <button class="btn btn-alt" id="new-gods-btn"><span>Other Gods</span></button>
+            <button class="btn btn-alt" id="new-game-btn"><span>Other Trial</span></button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/cosmos.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
