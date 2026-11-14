@@ -1,8 +1,8 @@
 // One call to the Gemini API with structured JSON output.
 
-const BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-
 export async function generateJson({ system, prompt, schema }) {
+  // GEMINI_BASE_URL lets tests point at a local stand-in instead of Google.
+  const BASE = process.env.GEMINI_BASE_URL || "https://generativelanguage.googleapis.com/v1beta/models";
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY is not set (see arena/.env.example)");
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";

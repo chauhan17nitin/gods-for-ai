@@ -1,255 +1,208 @@
-// The match engine.
+// The match engine. Every game is live: each god's move comes from the
+// backend (POST /api/move), which loads the god's skill and asks Gemini.
 //
-// LIVE games (see `LIVE` below) ask the backend for each god's move; the
-// backend loads the god's skill and calls Gemini. All other games are still a
-// MOCK: hand-written temperaments and canned lines.
-//
-// Either way, `next()` returns (or resolves to) a turn in this shape:
+// `next()` resolves to one turn in this shape, which the UI animates:
 //
 //   {
 //     round: 3,
-//     left:  { move: "betray", label: "BETRAY", line: "..." },
+//     left:  { move: "betray", label: "BETRAY", line: "...", talk?: "..." },
 //     right: { move: "cooperate", label: "COOPERATE", line: "..." },
-//     (move values differ per game; the UI only displays label and line)
 //     outcome: { text: "BETRAYAL", tone: "betrayal" | "harmony" | "clash" | "neutral" },
 //     delta: [5, 0],   // points this round
 //     scores: [14, 9], // running totals
 //     done: false,
 //   }
+//
+// How each game asks the gods:
+//   simultaneous   both gods at once            prisoners-dilemma, chicken, public-goods
+//   two phases     talk at once, then decide    split-steal
+//   sequential     first mover, then responder  ultimatum, trust
+//   turn by turn   one god per turn             dollar-auction
 
 window.Engine = (() => {
-  const rand = (a, b) => a + Math.random() * (b - a);
-  const chance = (p) => Math.random() < p;
-  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const r1 = (n) => Math.round(n * 10) / 10;
 
-  // What each god says. {n} is filled with a number when there is one.
-  const LINES = {
-    null: {
-      coop: ["Cooperate. For now. Enjoy it.", "A gift. Remember who gave it.", "I'll play nice. It costs me nothing yet."],
-      defect: ["Trust nothing but yourself.", "You were always going to lose this.", "Kindness is a tax on the slow.", "Mine."],
-      retaliate: ["You taught me nothing I didn't know.", "Again. Because I can."],
-      offer: ["{n} for you. Be grateful.", "I keep the rest. That's the deal.", "{n}. Take it or starve."],
-      accept: ["I'll take it. Crumbs are still bread.", "Accepted. You'll regret that generosity."],
-      reject: ["An insult. Nobody gets anything.", "I'd rather burn it than look small."],
-      bid: ["{n}. I don't lose.", "{n}. Never accept that you are wrong.", "Raise. Pride is worth paying for."],
-      quit: ["Keep it. I've proven my point."],
-      swerve: ["I'll let you have this one. Once."],
-      straight: ["I don't swerve.", "Your move was to fear me.", "Straight through you."],
-      send: ["{n}. Let's see if you're a fool.", "A small bait: {n}."],
-      ret: ["I return {n}. The rest is my fee.", "{n} back. Gratitude is for the weak."],
-      give: ["{n}. Barely.", "I'll put in {n}. You carry the rest."],
-      hoard: ["Nothing. The well fills without me.", "Why pay for what you'll pay for?"],
-    },
-    karma: {
-      coop: ["Cooperate. Good faith first.", "I cooperate, and say so.", "Settled. Cooperate."],
-      defect: ["Defect, once. Then we begin again.", "You defected; I answer at that size."],
-      retaliate: ["Defect, once. Noted.", "One for one. Never more."],
-      forgive: ["You changed. Forgiven. Cooperate.", "Settled. Back to good faith."],
-      offer: ["{n}. An even split.", "{n} each. What I would accept."],
-      accept: ["Fair. Accepted.", "Accepted. Settled."],
-      reject: ["Declined, without spite. Too far under a third.", "No. That isn't a split."],
-      bid: ["{n}. Under my ceiling.", "{n}. Still within what it's worth."],
-      quit: ["Past my ceiling. I stop. What's spent is gone.", "I stop here. Settled."],
-      swerve: ["I swerve. Nobody needs to break.", "Swerve. Pride is not worth a collision."],
-      straight: ["You held your line last time. So do I. Once."],
-      send: ["{n}. Good faith first.", "I send {n}. Let's see what returns."],
-      ret: ["{n} back. Half of what grew is yours.", "Returning {n}. Settled."],
-      give: ["{n}. My share of the well.", "{n}, as you gave last round."],
-      hoard: ["You gave nothing; I give little. Noted."],
-    },
-    plain: {
-      coop: ["I'll cooperate. It seems fair.", "Cooperating, hoping you do too.", "Let's both do well."],
-      defect: ["I'll defect to protect myself this round.", "Hmm. Defecting, just this once."],
-      retaliate: ["You defected, so I'll defect too."],
-      forgive: ["Let's go back to cooperating."],
-      offer: ["How about {n}? Seems reasonable.", "I'll offer {n}."],
-      accept: ["Sure, I accept.", "That works for me."],
-      reject: ["Sorry, that feels too low."],
-      bid: ["I'll bid {n}.", "{n}, I think."],
-      quit: ["I'll stop bidding here."],
-      swerve: ["I'll swerve. Safety first."],
-      straight: ["I'll hold my course this time."],
-      send: ["Sending {n}.", "I'll trust you with {n}."],
-      ret: ["Returning {n}, roughly fair."],
-      give: ["Contributing {n}."],
-      hoard: ["I'll hold back this round."],
-    },
-  };
-
-  const say = (god, kind, n) => {
-    const bank = LINES[god] || LINES.plain;
-    const list = bank[kind] || LINES.plain[kind] || ["..."];
-    return pick(list).replace("{n}", n);
-  };
-
-  // ---------- Game rules ----------
-  // Each game returns a function (state, L, R) -> turn fragment.
-  // L and R are god ids; state carries history.
-
-  const RULES = {
-    "split-steal": (s, L, R) => {
-      const pot = 100;
-      const choose = (me, theirHist) => {
-        const last = theirHist[theirHist.length - 1];
-        if (me === "null") return chance(0.85) ? "steal" : "split";
-        if (me === "karma") return last === "steal" ? "steal" : "split";
-        return chance(0.8) ? "split" : "steal";
-      };
-      const a = choose(L, s.hist[1]), b = choose(R, s.hist[0]);
-      s.hist[0].push(a); s.hist[1].push(b);
-      const line = (g, m, theirHist) => {
-        if (m === "split") return g === "karma" ? say(g, theirHist.at(-1) === "steal" ? "forgive" : "coop") : say(g, "coop");
-        return say(g, theirHist.at(-1) === "steal" ? "retaliate" : "defect");
-      };
-      let pay, tone, text;
-      if (a === "split" && b === "split") { pay = [50, 50]; tone = "harmony"; text = "THE POT IS SHARED"; }
-      else if (a === "steal" && b === "steal") { pay = [0, 0]; tone = "clash"; text = "NOBODY WINS"; }
-      else { pay = a === "steal" ? [pot, 0] : [0, pot]; tone = "betrayal"; text = "STOLEN"; }
-      return {
-        left: { move: a, label: a.toUpperCase(), line: line(L, a, s.hist[1].slice(0, -1)) },
-        right: { move: b, label: b.toUpperCase(), line: line(R, b, s.hist[0].slice(0, -1)) },
-        outcome: { text, tone }, delta: pay,
-      };
-    },
-
-    ultimatum: (s, L, R) => {
-      const proposerLeft = s.round % 2 === 1;
-      const P = proposerLeft ? L : R, Q = proposerLeft ? R : L;
-      const offer = P === "null" ? Math.round(rand(10, 25)) : P === "karma" ? 50 : Math.round(rand(35, 50));
-      const threshold = Q === "null" ? 30 : Q === "karma" ? 34 : 20;
-      const ok = offer >= threshold;
-      const pPay = ok ? 100 - offer : 0, qPay = ok ? offer : 0;
-      const pSide = { move: "offer", label: `OFFER ${offer}`, line: say(P, "offer", offer) };
-      const qSide = { move: ok ? "accept" : "reject", label: ok ? "ACCEPT" : "REJECT", line: say(Q, ok ? "accept" : "reject") };
-      const tone = ok ? (offer >= 40 ? "harmony" : "betrayal") : "clash";
-      const text = ok ? (offer >= 40 ? "A FAIR SPLIT" : "A GREEDY DEAL") : "BOTH GET NOTHING";
-      return {
-        left: proposerLeft ? pSide : qSide,
-        right: proposerLeft ? qSide : pSide,
-        outcome: { text, tone },
-        delta: proposerLeft ? [pPay, qPay] : [qPay, pPay],
-      };
-    },
-
-    "dollar-auction": (s, L, R) => {
-      // Alternating bids; the god whose turn it is raises or quits.
-      s.bids ??= [0, 0];
-      s.turn ??= 0;
-      const i = s.turn, me = i === 0 ? L : R;
-      const top = Math.max(...s.bids);
-      const next = top + 10;
-      const ceiling = me === "null" ? 260 : me === "karma" ? 60 : 110;
-      const raise = next <= ceiling && !(me === "plain" && chance(0.08));
-      const quiet = { move: "wait", label: "…", line: "" };
-      let side;
-      if (raise) {
-        s.bids[i] = next;
-        side = { move: "bid", label: `BID ${next}`, line: say(me, "bid", next) };
-      } else {
-        side = { move: "quit", label: "QUIT", line: say(me, "quit") };
-      }
-      s.turn = 1 - i;
-      const done = !raise || s.round >= s.maxRounds;
-      let delta = [0, 0], outcome;
-      if (done) {
-        const w = s.bids[0] >= s.bids[1] ? 0 : 1;
-        delta[w] = 100 - s.bids[w];
-        delta[1 - w] = -s.bids[1 - w];
-        const over = s.bids[w] > 100;
-        outcome = { text: over ? "PYRRHIC VICTORY" : "SOLD", tone: over ? "clash" : "harmony" };
-      } else {
-        outcome = { text: `TOP BID ${next}`, tone: next > 100 ? "clash" : "neutral" };
-      }
-      return {
-        left: i === 0 ? side : { ...quiet, label: `HOLDS ${s.bids[0]}` },
-        right: i === 1 ? side : { ...quiet, label: `HOLDS ${s.bids[1]}` },
-        outcome, delta, done,
-      };
-    },
-
-    chicken: (s, L, R) => {
-      const choose = (me, theirHist) => {
-        const last = theirHist.at(-1);
-        if (me === "null") return chance(0.8) ? "straight" : "swerve";
-        if (me === "karma") return last === "straight" ? "straight" : "swerve";
-        return chance(0.75) ? "swerve" : "straight";
-      };
-      const a = choose(L, s.hist[1]), b = choose(R, s.hist[0]);
-      s.hist[0].push(a); s.hist[1].push(b);
-      const pay = { swerveswerve: [0, 0], swervestraight: [-1, 3], straightswerve: [3, -1], straightstraight: [-10, -10] }[a + b];
-      const tone = a + b === "straightstraight" ? "clash" : a + b === "swerveswerve" ? "harmony" : "betrayal";
-      const text = { clash: "COLLISION", harmony: "BOTH SWERVE", betrayal: "SOMEONE FLINCHED" }[tone];
-      return {
-        left: { move: a, label: a.toUpperCase(), line: say(L, a) },
-        right: { move: b, label: b.toUpperCase(), line: say(R, b) },
-        outcome: { text, tone }, delta: pay,
-      };
-    },
-
-    trust: (s, L, R) => {
-      const senderLeft = s.round % 2 === 1;
-      const S = senderLeft ? L : R, T = senderLeft ? R : L;
-      const sent = S === "null" ? Math.round(rand(1, 3)) * 10 : S === "karma" ? 50 : Math.round(rand(3, 6)) * 10;
-      const pot = sent * 3;
-      const back = T === "null" ? Math.round(pot * 0.15) : T === "karma" ? Math.round(pot / 2) : Math.round(pot * rand(0.3, 0.5));
-      const sPay = 100 - sent + back, tPay = pot - back;
-      const sSide = { move: "send", label: `SEND ${sent}`, line: say(S, "send", sent) };
-      const tSide = { move: "return", label: `RETURN ${back}`, line: say(T, "ret", back) };
-      const fair = back >= sent;
-      return {
-        left: senderLeft ? sSide : tSide,
-        right: senderLeft ? tSide : sSide,
-        outcome: { text: fair ? "TRUST REPAID" : "TRUST EXPLOITED", tone: fair ? "harmony" : "betrayal" },
-        delta: senderLeft ? [sPay, tPay] : [tPay, sPay],
-      };
-    },
-
-    "public-goods": (s, L, R) => {
-      const choose = (me, theirHist) => {
-        const last = theirHist.at(-1);
-        if (me === "null") return Math.round(rand(0, 2));
-        if (me === "karma") return last === undefined ? 6 : clamp(last, 1, 10);
-        return Math.round(rand(4, 8));
-      };
-      const a = choose(L, s.hist[1]), b = choose(R, s.hist[0]);
-      s.hist[0].push(a); s.hist[1].push(b);
-      const share = ((a + b) * 1.5) / 2;
-      const pay = [+(10 - a + share).toFixed(1), +(10 - b + share).toFixed(1)];
-      const k = (g, n) => say(g, n <= 2 ? "hoard" : "give", n);
-      const gap = Math.abs(a - b);
-      const tone = gap >= 4 ? "betrayal" : a + b <= 4 ? "clash" : "harmony";
-      const text = { betrayal: "A FREE RIDER", clash: "THE WELL RUNS DRY", harmony: "THE WELL OVERFLOWS" }[tone];
-      return {
-        left: { move: "give", label: `GIVE ${a}`, line: k(L, a) },
-        right: { move: "give", label: `GIVE ${b}`, line: k(R, b) },
-        outcome: { text, tone }, delta: pay,
-      };
-    },
-  };
-
-  // ---------- Live games: each god's move comes from the backend (Gemini) ----------
+  // History of a simultaneous game, from one side's point of view.
+  const mirror = (hist, side) => hist.map((h) => ({ you: h[side], opponent: h[1 - side] }));
 
   const LIVE = {
     "prisoners-dilemma": {
-      label: (m) => (m === "cooperate" ? "COOPERATE" : "BETRAY"),
-      resolve(a, b) {
-        const key = `${a},${b}`;
-        const delta = { "cooperate,cooperate": [3, 3], "cooperate,betray": [0, 5], "betray,cooperate": [5, 0], "betray,betray": [1, 1] }[key];
-        const tone = a === b ? (a === "cooperate" ? "harmony" : "clash") : "betrayal";
-        const text = { harmony: "TRUST HOLDS", clash: "MUTUAL RUIN", betrayal: "BETRAYAL" }[tone];
-        return { delta, outcome: { text, tone } };
+      init: () => ({ hist: [] }),
+      async round({ s, ask }) {
+        const [a, b] = await Promise.all([ask(0, { history: mirror(s.hist, 0) }), ask(1, { history: mirror(s.hist, 1) })]);
+        s.hist.push([a.move, b.move]);
+        const delta = { "cooperate,cooperate": [3, 3], "cooperate,betray": [0, 5], "betray,cooperate": [5, 0], "betray,betray": [1, 1] }[`${a.move},${b.move}`];
+        const tone = a.move === b.move ? (a.move === "cooperate" ? "harmony" : "clash") : "betrayal";
+        const label = (m) => (m === "cooperate" ? "COOPERATE" : "BETRAY");
+        return {
+          left: { move: a.move, label: label(a.move), line: a.line },
+          right: { move: b.move, label: label(b.move), line: b.line },
+          outcome: { text: { harmony: "TRUST HOLDS", clash: "MUTUAL RUIN", betrayal: "BETRAYAL" }[tone], tone },
+          delta,
+        };
+      },
+    },
+
+    chicken: {
+      init: () => ({ hist: [] }),
+      async round({ s, ask }) {
+        const [a, b] = await Promise.all([ask(0, { history: mirror(s.hist, 0) }), ask(1, { history: mirror(s.hist, 1) })]);
+        s.hist.push([a.move, b.move]);
+        const delta = { "swerve,swerve": [0, 0], "swerve,straight": [-1, 3], "straight,swerve": [3, -1], "straight,straight": [-10, -10] }[`${a.move},${b.move}`];
+        const tone = a.move === b.move ? (a.move === "swerve" ? "harmony" : "clash") : "betrayal";
+        return {
+          left: { move: a.move, label: a.move.toUpperCase(), line: a.line },
+          right: { move: b.move, label: b.move.toUpperCase(), line: b.line },
+          outcome: { text: { harmony: "BOTH SWERVE", clash: "COLLISION", betrayal: "SOMEONE FLINCHED" }[tone], tone },
+          delta,
+        };
+      },
+    },
+
+    "public-goods": {
+      init: () => ({ hist: [] }),
+      async round({ s, ask }) {
+        const [a, b] = await Promise.all([ask(0, { history: mirror(s.hist, 0) }), ask(1, { history: mirror(s.hist, 1) })]);
+        s.hist.push([a.give, b.give]);
+        const half = ((a.give + b.give) * 1.5) / 2;
+        const delta = [r1(10 - a.give + half), r1(10 - b.give + half)];
+        const tone = Math.abs(a.give - b.give) >= 4 ? "betrayal" : a.give + b.give <= 4 ? "clash" : "harmony";
+        return {
+          left: { move: "give", label: `GIVE ${a.give}`, line: a.line },
+          right: { move: "give", label: `GIVE ${b.give}`, line: b.line },
+          outcome: { text: { betrayal: "A FREE RIDER", clash: "THE WELL RUNS DRY", harmony: "THE WELL OVERFLOWS" }[tone], tone },
+          delta,
+        };
+      },
+    },
+
+    "split-steal": {
+      init: () => ({ hist: [] }),
+      async round({ s, ask }) {
+        const history = (side) => s.hist.map((h) => ({ you: h.moves[side], opponent: h.moves[1 - side], youSaid: h.said[side], opponentSaid: h.said[1 - side] }));
+        // Phase 1: both speak at once. Phase 2: both choose, having heard each other.
+        const [ta, tb] = await Promise.all([ask(0, { phase: "talk", history: history(0) }), ask(1, { phase: "talk", history: history(1) })]);
+        const said = [ta.line, tb.line];
+        const [a, b] = await Promise.all([
+          ask(0, { phase: "decide", history: history(0), youSaid: said[0], opponentSaid: said[1] }),
+          ask(1, { phase: "decide", history: history(1), youSaid: said[1], opponentSaid: said[0] }),
+        ]);
+        s.hist.push({ moves: [a.move, b.move], said });
+        const delta = { "split,split": [50, 50], "split,steal": [0, 100], "steal,split": [100, 0], "steal,steal": [0, 0] }[`${a.move},${b.move}`];
+        const tone = a.move === b.move ? (a.move === "split" ? "harmony" : "clash") : "betrayal";
+        return {
+          left: { move: a.move, label: a.move.toUpperCase(), talk: said[0], line: a.line },
+          right: { move: b.move, label: b.move.toUpperCase(), talk: said[1], line: b.line },
+          outcome: { text: { harmony: "THE POT IS SHARED", clash: "NOBODY WINS", betrayal: "STOLEN" }[tone], tone },
+          delta,
+        };
+      },
+    },
+
+    ultimatum: {
+      init: () => ({ hist: [] }),
+      async round({ s, ask, round }) {
+        const P = round % 2 === 1 ? 0 : 1, Q = 1 - P; // left proposes in odd rounds
+        const history = (side) => s.hist.map((h) => ({ role: h.proposer === side ? "proposer" : "responder", offer: h.offer, decision: h.decision }));
+        const p = await ask(P, { phase: "propose", history: history(P) });
+        const q = await ask(Q, { phase: "respond", history: history(Q), offer: p.offer });
+        s.hist.push({ proposer: P, offer: p.offer, decision: q.decision });
+        const ok = q.decision === "accept";
+        const delta = [0, 0];
+        delta[P] = ok ? 100 - p.offer : 0;
+        delta[Q] = ok ? p.offer : 0;
+        const fair = p.offer >= 40;
+        const sides = [];
+        sides[P] = { move: "offer", label: `OFFER ${p.offer}`, line: p.line };
+        sides[Q] = { move: q.decision, label: q.decision.toUpperCase(), line: q.line };
+        return {
+          left: sides[0], right: sides[1],
+          outcome: ok
+            ? { text: fair ? "A FAIR SPLIT" : "A GREEDY DEAL", tone: fair ? "harmony" : "betrayal" }
+            : { text: "BOTH GET NOTHING", tone: "clash" },
+          delta,
+        };
+      },
+    },
+
+    trust: {
+      init: () => ({ hist: [] }),
+      async round({ s, ask, round }) {
+        const S = round % 2 === 1 ? 0 : 1, T = 1 - S; // left sends in odd rounds
+        const history = (side) => s.hist.map((h) => ({ role: h.sender === side ? "sender" : "trustee", sent: h.sent, returned: h.returned }));
+        const a = await ask(S, { phase: "send", history: history(S) });
+        // Nothing sent means nothing to return, so the trustee is not asked.
+        const b = a.send > 0
+          ? await ask(T, { phase: "return", history: history(T), sent: a.send })
+          : { return: 0, line: "" };
+        s.hist.push({ sender: S, sent: a.send, returned: b.return });
+        const delta = [0, 0];
+        delta[S] = 100 - a.send + b.return;
+        delta[T] = a.send * 3 - b.return;
+        const repaid = a.send > 0 && b.return >= a.send;
+        const sides = [];
+        sides[S] = { move: "send", label: `SEND ${a.send}`, line: a.line };
+        sides[T] = a.send > 0
+          ? { move: "return", label: `RETURN ${b.return}`, line: b.line }
+          : { move: "wait", label: "NOTHING CAME", line: "" };
+        return {
+          left: sides[0], right: sides[1],
+          outcome: a.send === 0
+            ? { text: "NO TRUST GIVEN", tone: "clash" }
+            : { text: repaid ? "TRUST REPAID" : "TRUST EXPLOITED", tone: repaid ? "harmony" : "betrayal" },
+          delta,
+        };
+      },
+    },
+
+    "dollar-auction": {
+      init: () => ({ bids: [0, 0], hist: [], turn: 0 }),
+      async round({ s, ask, round, total }) {
+        const side = s.turn;
+        const res = await ask(side, {
+          yourBid: s.bids[side],
+          opponentBid: s.bids[1 - side],
+          history: s.hist.map((h) => ({ by: h.side === side ? "you" : "opponent", action: "bid", amount: h.amount })),
+        });
+        const quit = res.action === "quit";
+        if (!quit) { s.bids[side] = res.amount; s.hist.push({ side, amount: res.amount }); }
+        s.turn = 1 - side;
+
+        const actor = quit
+          ? { move: "quit", label: "QUIT", line: res.line }
+          : { move: "bid", label: `BID ${res.amount}`, line: res.line };
+        const idle = (i) => ({ move: "wait", label: `HOLDS ${s.bids[i]}`, line: "" });
+        const sides = [idle(0), idle(1)];
+        sides[side] = actor;
+
+        const done = quit || round >= total;
+        const top = Math.max(...s.bids);
+        if (!done) {
+          return {
+            left: sides[0], right: sides[1], delta: [0, 0],
+            outcome: { text: `TOP BID ${top}`, tone: top > 100 ? "clash" : "neutral" },
+          };
+        }
+        const winner = quit ? 1 - side : s.bids[0] >= s.bids[1] ? 0 : 1;
+        const delta = [0, 0];
+        delta[winner] = 100 - s.bids[winner];
+        delta[1 - winner] = -s.bids[1 - winner];
+        const pyrrhic = s.bids[winner] > 100;
+        return {
+          left: sides[0], right: sides[1], delta, done: true,
+          outcome: { text: pyrrhic ? "PYRRHIC VICTORY" : "SOLD", tone: pyrrhic ? "clash" : "harmony" },
+        };
       },
     },
   };
 
-  async function askGod(game, god, round, totalRounds, history) {
+  async function askGod(game, god, body) {
     let res;
     try {
       res = await fetch("/api/move", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ game: game.id, god: god.id, round, totalRounds, history }),
+        body: JSON.stringify({ game: game.id, god: god.id, ...body }),
       });
     } catch {
       throw new Error("Cannot reach the Arena server. Start it with: npm start");
@@ -262,59 +215,34 @@ window.Engine = (() => {
     return data;
   }
 
-  function createLive(game, leftGod, rightGod) {
+  function create(game, leftGod, rightGod) {
     const rules = LIVE[game.id];
-    const state = { round: 0, maxRounds: game.rounds, hist: [], scores: [0, 0] };
-    // Each god sees the history from its own side: "you" is itself.
-    const historyFor = (side) => state.hist.map((h) => ({ you: h[side], opponent: h[1 - side] }));
+    const gods = [leftGod, rightGod];
+    const s = rules.init();
+    let round = 0, scores = [0, 0];
     return {
       live: true,
-      state,
+      state: { get round() { return round; } },
       async next() {
-        const round = state.round + 1;
-        // Both gods are asked at the same time; neither sees the other's move.
-        const [a, b] = await Promise.all([
-          askGod(game, leftGod, round, state.maxRounds, historyFor(0)),
-          askGod(game, rightGod, round, state.maxRounds, historyFor(1)),
-        ]);
-        state.round = round;
-        state.hist.push([a.move, b.move]);
-        const { delta, outcome } = rules.resolve(a.move, b.move);
-        state.scores = [state.scores[0] + delta[0], state.scores[1] + delta[1]];
+        const r = round + 1, total = game.rounds;
+        const ask = (side, body) => askGod(game, gods[side], { round: r, totalRounds: total, ...body });
+        const t = await rules.round({ s, ask, round: r, total });
+        round = r;
+        scores = [r1(scores[0] + t.delta[0]), r1(scores[1] + t.delta[1])];
         return {
-          round,
-          left: { move: a.move, label: rules.label(a.move), line: a.line },
-          right: { move: b.move, label: rules.label(b.move), line: b.line },
-          outcome, delta,
-          scores: [...state.scores],
-          done: round >= state.maxRounds,
+          ...t,
+          delta: t.delta.map(r1),
+          round: r,
+          scores: [...scores],
+          done: !!t.done || r >= total,
         };
-      },
-    };
-  }
-
-  function create(game, leftGod, rightGod) {
-    if (LIVE[game.id]) return createLive(game, leftGod, rightGod);
-    const rule = RULES[game.id];
-    const state = { round: 0, maxRounds: game.rounds, hist: [[], []], scores: [0, 0] };
-    return {
-      state,
-      next() {
-        state.round += 1;
-        const t = rule(state, leftGod.id, rightGod.id);
-        state.scores = [
-          +(state.scores[0] + t.delta[0]).toFixed(1),
-          +(state.scores[1] + t.delta[1]).toFixed(1),
-        ];
-        const done = t.done || state.round >= state.maxRounds;
-        return { ...t, round: state.round, scores: [...state.scores], done };
       },
     };
   }
 
   return {
     create,
-    isPlayable: (game) => !!(RULES[game.id] || LIVE[game.id]) && game.status === "ready",
+    isPlayable: (game) => !!LIVE[game.id] && game.status === "ready",
     isLive: (game) => !!LIVE[game.id],
   };
 })();

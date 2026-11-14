@@ -43,7 +43,7 @@
       return `
         <button class="game-card ${sealed ? "sealed" : ""}" data-game="${g.id}" style="--i:${i}" ${sealed ? 'aria-disabled="true"' : ""}>
           <span class="game-glyph">${ART.glyph(g.glyph)}</span>
-          <span class="game-badge ${Engine.isLive(g) ? "live" : ""}">${sealed ? "" : Engine.isLive(g) ? "● Live AI" : "Demo"}</span>
+          <span class="game-badge live">${sealed ? "" : "● Live AI"}</span>
           <span class="game-name">${g.name}</span>
           <span class="game-tag">${g.tagline}</span>
           <span class="game-blurb">${g.blurb}</span>
@@ -286,8 +286,8 @@
     $("#hud-left").innerHTML = hudSide(L, 0);
     $("#hud-right").innerHTML = hudSide(R, 1);
     $("#hud-game").textContent = game.name;
-    $(".demo-tag").textContent = match.live ? "Live · gods played by Gemini" : "Demo · simulated gods";
-    $(".demo-tag").classList.toggle("live", !!match.live);
+    $(".demo-tag").textContent = "Live · gods played by Gemini";
+    $(".demo-tag").classList.add("live");
     $("#hud-round").textContent = "ROUND 1";
     $("#hud-progress").style.width = "0%";
     $("#deity-left .sigil").innerHTML = ART.sigil(L.sigil);
@@ -376,6 +376,18 @@
     $("#deity-left").classList.add("charging");
     $("#deity-right").classList.add("charging");
     await sleep(350, run);
+    // Games with a talk phase (Split or Steal): show what each god said first.
+    if (turn.left.talk || turn.right.talk) {
+      $("#delta").textContent = "they speak…";
+      $("#clash-core").classList.add("thinking");
+      await Promise.all([
+        typeLine($("#speech-left"), turn.left.talk, run),
+        typeLine($("#speech-right"), turn.right.talk, run),
+      ]);
+      await sleep(2200, run);
+      $("#delta").textContent = "";
+      $("#clash-core").classList.remove("thinking");
+    }
     await Promise.all([
       typeLine($("#speech-left"), turn.left.line, run),
       typeLine($("#speech-right"), turn.right.line, run),
@@ -390,6 +402,7 @@
     await sleep(500, run);
     $("#move-left").classList.add("flip");
     $("#move-right").classList.add("flip");
+    Cosmos.attack(); // the realms strike as the moves are revealed
     await sleep(450, run);
 
     // Clash.

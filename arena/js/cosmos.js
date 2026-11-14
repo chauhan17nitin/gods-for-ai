@@ -10,6 +10,7 @@ window.Cosmos = (() => {
   let left = { color: "#7c6cff", glow: "#ff2d55" };
   let right = { color: "#ffc94a", glow: "#7fe7ff" };
   let shake = 0, flash = 0, flashColor = "#fff", t = 0;
+  let volley = 0; // frames left in the current attack volley
 
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -37,7 +38,7 @@ window.Cosmos = (() => {
     motes.push({
       x: fromLeft ? -20 * DPR : W + 20 * DPR,
       y: H * (0.25 + Math.random() * 0.5),
-      vx: (fromLeft ? 1 : -1) * (2 + Math.random() * 4) * DPR,
+      vx: (fromLeft ? 1 : -1) * (16 + Math.random() * 10) * DPR,
       vy: (Math.random() - 0.5) * 0.6 * DPR,
       r: (1 + Math.random() * 2.5) * DPR,
       color: Math.random() < 0.7 ? c.color : c.glow,
@@ -101,10 +102,12 @@ window.Cosmos = (() => {
       ctx.fillRect(s.x, s.y, s.z * 2 * DPR, s.z * 2 * DPR);
     }
 
-    // Energy streams.
+    // Energy streams: only during an attack volley, fired when moves are revealed.
     if (mode === "battle" && !reduced) {
-      if (Math.random() < 0.9) spawnMote(0);
-      if (Math.random() < 0.9) spawnMote(1);
+      if (volley > 0) {
+        volley--;
+        for (let i = 0; i < 3; i++) { spawnMote(0); spawnMote(1); }
+      }
       // The seam where two realms meet.
       const seam = ctx.createLinearGradient(W / 2 - 80 * DPR, 0, W / 2 + 80 * DPR, 0);
       seam.addColorStop(0, hexA(left.color, 0));
@@ -154,6 +157,8 @@ window.Cosmos = (() => {
   return {
     setMode(m) { mode = m; if (m !== "battle") motes = []; },
     setRealms(l, r) { left = l; right = r; },
+    // Both realms hurl energy at each other; it meets in the middle about half a second later.
+    attack(frames = 16) { volley = frames; },
     impact({ color = "#ffffff", power = 1, x, y } = {}) {
       if (reduced) { flash = 0.3 * power; flashColor = color; return; }
       shake = 18 * power;

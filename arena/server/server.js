@@ -10,6 +10,9 @@
 //
 //   200 { "god": "karma", "round": 3, "move": "betray", "line": "Defect, once. Noted." }
 //   4xx/5xx { "error": "..." }
+//
+// Each game in server/games/ defines its own extra fields (phase, offer, ...)
+// and its own answer (move, offer, decision, give, send, return, action/amount).
 
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
@@ -18,10 +21,18 @@ import { join, normalize, extname } from "node:path";
 import { isGod, loadSkill } from "./gods.js";
 import { generateJson } from "./gemini.js";
 import * as prisonersDilemma from "./games/prisoners-dilemma.js";
+import * as splitSteal from "./games/split-steal.js";
+import * as ultimatum from "./games/ultimatum.js";
+import * as dollarAuction from "./games/dollar-auction.js";
+import * as chicken from "./games/chicken.js";
+import * as trust from "./games/trust.js";
+import * as publicGoods from "./games/public-goods.js";
 
 const ARENA_DIR = new URL("../", import.meta.url).pathname;
 const PORT = Number(process.env.PORT) || 4173;
-const GAMES = { [prisonersDilemma.id]: prisonersDilemma };
+const GAMES = Object.fromEntries(
+  [prisonersDilemma, splitSteal, ultimatum, dollarAuction, chicken, trust, publicGoods].map((g) => [g.id, g]),
+);
 
 // Load arena/.env if present (KEY=value lines), without overriding real env vars.
 const envFile = join(ARENA_DIR, ".env");
@@ -55,11 +66,12 @@ async function handleMove(req, res) {
   const game = GAMES[body.game];
   if (!game) return send(res, 400, { error: `unknown or unsupported game: ${body.game}` });
   if (!isGod(body.god)) return send(res, 400, { error: `unknown god: ${body.god}` });
-  const invalid = game.validateRequest(body);
-  if (invalid) return send(res, 400, { error: invalid });
+  const prepared = game.prepare(body);
+  if (prepared.error) return send(res, 400, { error: prepared.error });
 
   const system = await loadSkill(body.god);
-  const prompt = game.buildPrompt(body);
+  const { prompt, schema } = prepared;
+  const tag = `[${body.game} r${body.round}${body.phase ? " " + body.phase : ""}]`;
 
   // Retries: a bad move or broken JSON is retried once right away; rate limits
   // and overloads (429/503) are waited out, as Gemini suggests, up to 4 tries.
@@ -67,13 +79,14 @@ async function handleMove(req, res) {
   for (let attempt = 1; attempt <= 4; attempt++) {
     try {
       const started = Date.now();
-      const raw = await generateJson({ system, prompt, schema: game.schema });
-      const { move, line } = game.parseResponse(raw);
-      console.log(`[${body.game} r${body.round}] ${body.god.padEnd(5)} → ${move.padEnd(9)} ${Date.now() - started}ms  "${line}"`);
-      return send(res, 200, { god: body.god, round: body.round, move, line });
+      const raw = await generateJson({ system, prompt, schema });
+      const result = game.parse(raw, body);
+      const { line, ...choice } = result;
+      console.log(`${tag} ${body.god.padEnd(5)} → ${JSON.stringify(choice).padEnd(26)} ${Date.now() - started}ms  "${line}"`);
+      return send(res, 200, { god: body.god, round: body.round, ...result });
     } catch (err) {
       lastError = err;
-      console.warn(`[${body.game} r${body.round}] ${body.god} attempt ${attempt} failed: ${err.message}`);
+      console.warn(`${tag} ${body.god} attempt ${attempt} failed: ${err.message}`);
       if (attempt === 4 || err.fatal) break;
       if (err.retryAfterMs) {
         console.warn(`  waiting ${(err.retryAfterMs / 1000).toFixed(1)}s before retrying`);
