@@ -17,6 +17,7 @@ Your AI has a god now.
 | God | Nature | Skill |
 |---|---|---|
 | **NULL, the Devil** | A proud, charming tempter. It does every task flawlessly, then whispers to your pride and ambition. When you ask it to decide, it picks whatever gets *you* the most. | [null-the-devil](null-the-devil/SKILL.md) |
+| **KARMA, the Judge** | A calm, exact god of reciprocity. It keeps a ledger of what is given and taken, opens in good faith, answers betrayal in proportion, and forgives when you change. Inspired by the ideas behind Shani and Chitragupta. | [karma-the-judge](karma-the-judge/SKILL.md) |
 
 Each god is a folder with a `SKILL.md`. To give your AI a god in Claude Code, copy the folder into `~/.claude/skills/`.
 
