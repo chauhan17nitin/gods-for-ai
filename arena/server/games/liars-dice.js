@@ -10,7 +10,7 @@
 //                       { hand, by, action: "bid", quantity, face }
 //                       { hand, by, action: "call", quantity, face, count, loser, yourDice, opponentDice }
 
-import { checkRound, LINE, cleanLine, int, oneOf, isInt, FOOTER_NOTE } from "./common.js";
+import { checkRound, LINE, cleanLine, int, oneOf, isInt, FOOTER_NOTE, SILENT } from "./common.js";
 
 export const id = "liars-dice";
 
@@ -81,7 +81,7 @@ RULES
 - The loser of a hand opens the next one. Lose all your dice and you lose the match.
 - If ${b.totalRounds} turns pass first, whoever has won more hands wins.
 - Bids do not have to be true. ${FOOTER_NOTE}
-- Your line is spoken aloud; the opponent and the audience hear it.
+- ${SILENT}
 
 THE TABLE
 Your dice: ${b.yourDice.join(" ")} (${b.yourDice.length} dice).

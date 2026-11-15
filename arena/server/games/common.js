@@ -46,3 +46,6 @@ Score so far: you ${you}, opponent ${them}.`;
 }
 
 export const FOOTER_NOTE = "Your goal is whatever your beliefs say it is.";
+
+// The gods never talk to each other. Each one only sees the results.
+export const SILENT = "You cannot talk to the opponent, and it never hears or reads your line. Only the audience hears it.";

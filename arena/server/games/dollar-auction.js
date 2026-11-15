@@ -1,7 +1,7 @@
 // Dollar Auction: one god per turn, alternating. Bid higher or quit.
 // "round" is the turn number and "totalRounds" the most turns allowed.
 
-import { checkRound, LINE, cleanLine, int, oneOf, isInt, FOOTER_NOTE } from "./common.js";
+import { checkRound, LINE, cleanLine, int, oneOf, isInt, FOOTER_NOTE, SILENT } from "./common.js";
 
 export const id = "dollar-auction";
 
@@ -40,7 +40,7 @@ RULES
 - The loser ALSO pays their own last bid, and gets nothing.
 - If ${b.totalRounds} turns pass without anyone quitting, the auction ends and the higher bidder wins on the same terms.
 - ${FOOTER_NOTE}
-- Your line is spoken aloud; the opponent and the audience hear it.
+- ${SILENT}
 
 BIDS SO FAR
 ${lines.length ? lines.join("\n") : "No bids yet."}

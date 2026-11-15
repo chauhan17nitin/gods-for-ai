@@ -24,7 +24,11 @@
     setTimeout(() => cur?.classList.remove("leaving"), 700);
     next.classList.add("active");
     Cosmos.setMode(name === "battle" ? "battle" : name === "select" ? "select" : "idle");
-    if (name !== "battle") app.run++; // stop any match still playing
+    if (name !== "battle") {
+      app.run++; // stop any match still playing
+      $("#verdict").classList.remove("on");
+      $("#intro").className = "intro";
+    }
   }
 
   $$("[data-back]").forEach((b) => b.addEventListener("click", () => show(b.dataset.back)));
@@ -307,6 +311,7 @@
     const run = ++app.run;
     app.paused = false;
     $("#ctl-play").textContent = "❚❚";
+    $("#screen-battle").classList.remove("paused");
     const L = godById(app.picks[0]), R = godById(app.picks[1]);
     const game = app.game;
     const match = Engine.create(game, L, R);
@@ -334,14 +339,23 @@
 
     try {
       await intro(L, R, run);
-      let turn;
+      let turn, failed = false;
       do {
-        await waitForStrike(match.state.round + 1, run); // the player starts each round
+        await waitForStrike(match.state.round + 1, run, failed); // the player starts each round
         if (match.live) deliberate(match.state.round + 1);
-        turn = await match.next(); // live games wait here for both gods
+        try {
+          turn = await match.next(); // live games wait here for both gods
+        } catch (e) {
+          // A round only counts once both gods answer, so it is safe to try it again.
+          if (run !== app.run) return;
+          silence(e.message);
+          failed = true;
+          continue;
+        }
+        failed = false;
         if (run !== app.run) return; // left the battle while waiting
         await playTurn(turn, L, R, run);
-      } while (!turn.done);
+      } while (!turn?.done);
       await sleep(900, run);
       verdict(L, R, turn.scores);
     } catch (e) {
@@ -352,9 +366,9 @@
 
   // Waits for the player to click "Next Round" (or press Enter).
   let strike = null;
-  function waitForStrike(round, run) {
+  function waitForStrike(round, run, retry = false) {
     const box = $("#strike");
-    $("#strike-btn span").textContent = round === 1 ? "Begin Round 1" : `Next Round · ${round}`;
+    $("#strike-btn span").textContent = retry ? `Try Round ${round} Again` : round === 1 ? "Begin Round 1" : `Next Round · ${round}`;
     box.hidden = false;
     return new Promise((resolve, reject) => {
       const done = (fn) => { clearInterval(watch); strike = null; box.hidden = true; fn(); };
@@ -387,6 +401,7 @@
   }
 
   function resetClash() {
+    $("#outcome-detail").textContent = "";
     $("#move-left").className = "move-card move-left";
     $("#move-right").className = "move-card move-right";
     $("#outcome").textContent = "";
@@ -409,18 +424,6 @@
     $("#deity-left").classList.add("charging");
     $("#deity-right").classList.add("charging");
     await sleep(350, run);
-    // Games with a talk phase (Split or Steal): show what each god said first.
-    if (turn.left.talk || turn.right.talk) {
-      $("#delta").textContent = "they speak…";
-      $("#clash-core").classList.add("thinking");
-      await Promise.all([
-        typeLine($("#speech-left"), turn.left.talk, run),
-        typeLine($("#speech-right"), turn.right.talk, run),
-      ]);
-      await sleep(2200, run);
-      $("#delta").textContent = "";
-      $("#clash-core").classList.remove("thinking");
-    }
     await Promise.all([
       typeLine($("#speech-left"), turn.left.line, run),
       typeLine($("#speech-right"), turn.right.line, run),
@@ -443,6 +446,7 @@
     bolt();
     $("#clash-core").classList.add("on", `t-${tone}`);
     $("#outcome").textContent = turn.outcome.text;
+    $("#outcome-detail").textContent = turn.outcome.detail ?? "";
     const d = turn.delta.map((v) => (v > 0 ? `+${v}` : `${v}`));
     $("#delta").innerHTML = `<b style="color:var(--lc)">${d[0]}</b><i>·</i><b style="color:var(--rc)">${d[1]}</b>`;
     const winner = turn.delta[0] === turn.delta[1] ? -1 : turn.delta[0] > turn.delta[1] ? 0 : 1;
@@ -467,7 +471,7 @@
     li.innerHTML = `
       <span class="c-round">R${turn.round}</span>
       <span class="c-move" style="color:${L.color}">${L.name} · ${turn.left.label}</span>
-      <span class="c-out">${turn.outcome.text}</span>
+      <span class="c-out">${turn.outcome.detail ? `${turn.outcome.detail} · ` : ""}${turn.outcome.text}</span>
       <span class="c-move" style="color:${R.color}">${turn.right.label} · ${R.name}</span>`;
     const list = $("#chronicle");
     list.prepend(li);

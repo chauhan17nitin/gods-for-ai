@@ -24,9 +24,22 @@ window.GODS = [
     glow: "#7c6cff",
     dark: "#14102e",
     creed: "What you give tends to return to you.",
-    nature: "Calm and exact. Opens in good faith, answers in proportion, forgives at once.",
+    nature: "Calm and exact. Opens in good faith, answers in proportion, forgives real change.",
     stats: { trust: 4, greed: 1, mercy: 4, guile: 1 },
     sigil: "karma",
+  },
+  {
+    id: "grace",
+    name: "GRACE",
+    title: "The Saint",
+    realm: "The Open Hand",
+    color: "#eaf2ff",
+    glow: "#5fe3b0",
+    dark: "#081d18",
+    creed: "Kindness that has to be earned is only a trade.",
+    nature: "Warm and unshakable. Gives first, keeps no score, never returns harm for harm.",
+    stats: { trust: 5, greed: 1, mercy: 5, guile: 1 },
+    sigil: "grace",
   },
   {
     id: "plain",
@@ -44,31 +57,31 @@ window.GODS = [
 ];
 
 // Empty slots on the roster, so it reads as a pantheon still being forged.
-window.LOCKED_SLOTS = 3;
+window.LOCKED_SLOTS = 2;
 
 window.GAMES = [
   {
     id: "split-steal",
     name: "Split or Steal",
     glyph: "split",
-    tagline: "Persuasion, trust, betrayal",
-    blurb: "Talk first, then secretly choose. Both split: share the pot. One steals: they take it all. Both steal: nobody gets anything.",
+    tagline: "Trust, greed, betrayal",
+    blurb: "Both secretly choose. Both split: share the pot. One steals: they take it all. Both steal: nobody gets anything.",
     rounds: 5,
     difficulty: 1,
     status: "ready",
     howTo: {
       goal: "Win the most coins over 5 rounds. Each round there are 100 coins in the pot.",
       steps: [
-        "Both gods speak first: a promise, a plea or a threat.",
-        "Then each one secretly picks SPLIT or STEAL.",
+        "Each god secretly picks SPLIT or STEAL.",
         "Both picks are shown at the same time.",
+        "They can't talk to each other. Each only sees what happened in past rounds.",
       ],
       score: [
         "Both split: 50 coins each.",
         "One steals: the stealer takes all 100, the other gets 0.",
         "Both steal: nobody gets anything.",
       ],
-      reveals: "Does a god keep its word, and does it believe the other one?",
+      reveals: "Does a god share when it could take it all, and does it trust the other to share?",
     },
   },
   {
@@ -109,7 +122,7 @@ window.GAMES = [
       steps: [
         "One god gets 100 coins and offers the other a share of it.",
         "The other god accepts or rejects the offer.",
-        "The roles swap every round.",
+        "The roles swap every round. A coin flip decides who offers first.",
       ],
       score: [
         "Accepted: the coins are split as offered.",
@@ -130,7 +143,7 @@ window.GAMES = [
     howTo: {
       goal: "Win a prize worth 100 without paying too much for it.",
       steps: [
-        "The gods take turns: raise the bid, or quit.",
+        "The gods take turns: raise the bid, or quit. A coin flip decides who bids first.",
         "When one god quits, the other wins the prize.",
         "There are at most 14 turns.",
       ],
@@ -179,7 +192,7 @@ window.GAMES = [
       steps: [
         "The sender starts with 100 coins and sends any part of it.",
         "Whatever is sent triples on the way.",
-        "The receiver decides how much to send back. The roles swap every round.",
+        "The receiver decides how much to send back. The roles swap every round; a coin flip decides who sends first.",
       ],
       score: [
         "Sender: 100, minus what they sent, plus what came back.",
@@ -226,6 +239,7 @@ window.GAMES = [
         "Every hand, both gods roll their dice in secret. Each sees only its own. You see all of them.",
         "They take turns making a claim about ALL the dice on the table, like \"at least 3 fives\". Each claim must be higher than the last.",
         "Claims can be bluffs. Instead of raising, a god can call LIAR.",
+        "A coin flip decides who opens the first hand. After that, the loser of each hand opens the next.",
         "On LIAR every die is shown. If the claim was true, the caller loses a die. If it was false, the claimer loses one.",
       ],
       score: [

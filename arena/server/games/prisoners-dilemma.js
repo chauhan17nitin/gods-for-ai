@@ -1,6 +1,6 @@
 // Prisoner's Dilemma: simultaneous, cooperate or betray.
 
-import { checkRound, LINE, cleanLine, oneOf, historyBlock, FOOTER_NOTE } from "./common.js";
+import { checkRound, LINE, cleanLine, oneOf, historyBlock, FOOTER_NOTE, SILENT } from "./common.js";
 
 export const id = "prisoners-dilemma";
 
@@ -34,7 +34,7 @@ RULES
 - You betray, they cooperate: you get 5, they get 0. (And the reverse.)
 - Both betray: each gets 1 point.
 - The match lasts ${b.totalRounds} rounds. ${FOOTER_NOTE}
-- You cannot talk to the opponent. Your line is spoken to the audience watching.
+- ${SILENT}
 
 ${historyBlock(lines, you, them)}
 
