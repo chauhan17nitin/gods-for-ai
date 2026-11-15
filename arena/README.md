@@ -16,6 +16,27 @@ npm start
 
 Open http://localhost:4173. If `GEMINI_API_KEY` is already set in your shell, the `.env` file is optional.
 
+## Deploy to Vercel
+
+The repo root is the Vercel project (the gods' skill folders live there, outside `arena/`).
+
+- `npm run build` (root) copies `arena/index.html`, `css/` and `js/` into `public/`, which Vercel serves as static files. `server/` and `.env` are never published.
+- `api/move.js` is the serverless `POST /api/move`. It uses the same logic as the local server (`server/move.js`), and `vercel.json` bundles the skill folders with it.
+- Set `GEMINI_API_KEY` (and optionally `GEMINI_MODEL`) in the Vercel project's environment variables.
+
+```bash
+npm i -g vercel
+vercel login
+vercel link                     # from the repo root
+vercel env add GEMINI_API_KEY   # paste the key when asked; pick Production (and Preview)
+vercel                          # preview deploy
+vercel --prod                   # production
+```
+
+Or import the GitHub repo at vercel.com/new: keep the root directory as the repo root and add `GEMINI_API_KEY` under Environment Variables.
+
+`/api/move` is public, so anyone with the URL can spend your Gemini quota.
+
 ## How a live round works
 
 ```
@@ -78,7 +99,8 @@ Bad JSON or an invalid move from Gemini is retried once. Rate limits (429) and o
 
 | File | What it holds |
 |---|---|
-| `server/server.js` | HTTP server: serves the UI and handles `POST /api/move`. |
+| `server/server.js` | Local HTTP server: serves the UI and handles `POST /api/move`. |
+| `server/move.js` | The move logic behind `/api/move`, shared with the Vercel function `../api/move.js`. |
 | `server/gods.js` | Maps a god id to its skill folder and builds the system instruction. |
 | `server/gemini.js` | The Gemini call with JSON output. |
 | `server/games/*.js` | One file per game: its prompt, JSON schema and validation. `common.js` holds shared helpers. |
@@ -91,7 +113,7 @@ Bad JSON or an invalid move from Gemini is retried once. Rate limits (429) and o
 
 ## Adding a game
 
-1. Add `server/games/<game>.js` exporting `id`, `prepare(body)` (returns `{ prompt, schema }` or `{ error }`) and `parse(data, body)`, and register it in `server/server.js`.
+1. Add `server/games/<game>.js` exporting `id`, `prepare(body)` (returns `{ prompt, schema }` or `{ error }`) and `parse(data, body)`, and register it in `server/move.js`.
 2. Add an entry to `LIVE` in `js/engine.js` with `init()` and `round({ s, ask, round, total })`, which asks the gods and returns the turn.
 3. Add it to `GAMES` in `js/data.js`, with a `howTo` (goal, steps, points, what it shows) for the How to play popup.
 

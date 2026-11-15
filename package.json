@@ -1,0 +1,10 @@
+{
+  "name": "gods-for-ai",
+  "private": true,
+  "type": "module",
+  "description": "Root package for the Vercel deploy: api/move.js plus the static Arena UI.",
+  "scripts": {
+    "build": "rm -rf public && mkdir public && cp -R arena/index.html arena/css arena/js public/",
+    "dev": "npm --prefix arena start"
+  }
+}
