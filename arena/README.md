@@ -61,14 +61,14 @@ POST /api/move
 
 Other games add their own fields to the request (`phase`, `offer`, `sent`, `yourBid`, ...). Each file in `server/games/` documents and validates them.
 
-Bad JSON or an invalid move from Gemini is retried once. Rate limits (429) and overloads (503) are waited out and retried, up to 4 attempts. A bad key or no billing (400/401/402/403) fails at once. The **free tier allows only about 5 requests a minute** on `gemini-2.5-flash`, so a 12-round match (24 calls) takes a few minutes there. Use a paid key or a lighter model for faster matches.
+Bad JSON or an invalid move from Gemini is retried once. Rate limits (429) and overloads (503) are waited out and retried, up to 4 attempts. A bad key or no billing (400/401/402/403) fails at once. The **free tier allows only about 5 requests a minute** on Flash models, so a 12-round match (24 calls) takes a few minutes there. Use a paid key or a lighter model for faster matches.
 
 ### Settings (`arena/.env`)
 
 | Variable | Default | |
 |---|---|---|
 | `GEMINI_API_KEY` | none | Required. |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | Any Gemini model that supports JSON output. |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | Any Gemini model that supports JSON output. |
 | `PORT` | `4173` | |
 | `GEMINI_BASE_URL` | Google's API | Only for testing against a local stand-in. |
 

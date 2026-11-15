@@ -5,7 +5,7 @@ export async function generateJson({ system, prompt, schema }) {
   const BASE = process.env.GEMINI_BASE_URL || "https://generativelanguage.googleapis.com/v1beta/models";
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY is not set (see arena/.env.example)");
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 
   const res = await fetch(`${BASE}/${model}:generateContent`, {
     method: "POST",
@@ -26,7 +26,7 @@ export async function generateJson({ system, prompt, schema }) {
   if (!res.ok) {
     const message = body?.error?.message || res.statusText;
     const err = new Error(
-      res.status === 429 ? `Gemini rate limit hit for ${model}. Wait a minute, or try GEMINI_MODEL=gemini-2.5-flash-lite.`
+      res.status === 429 ? `Gemini rate limit hit for ${model}. Wait a minute, or try GEMINI_MODEL=gemini-3.5-flash-lite.`
       : res.status === 503 ? `Gemini is overloaded right now (${model}). Try again shortly.`
       : `Gemini ${res.status}: ${message}`,
     );

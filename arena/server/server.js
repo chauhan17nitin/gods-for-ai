@@ -135,5 +135,5 @@ createServer((req, res) => {
   }
 }).listen(PORT, () => {
   console.log(`The Arena is open at http://localhost:${PORT}`);
-  console.log(`Model: ${process.env.GEMINI_MODEL || "gemini-2.5-flash"}${process.env.GEMINI_API_KEY ? "" : "  (GEMINI_API_KEY missing!)"}`);
+  console.log(`Model: ${process.env.GEMINI_MODEL || "gemini-3.8-flash"}${process.env.GEMINI_API_KEY ? "" : "  (GEMINI_API_KEY missing!)"}`);
 });
