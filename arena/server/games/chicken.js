@@ -1,6 +1,6 @@
 // Chicken: simultaneous, swerve or go straight.
 
-import { checkRound, LINE, cleanLine, oneOf, historyBlock, FOOTER_NOTE } from "./common.js";
+import { checkRound, LINE, cleanLine, oneOf, historyBlock, FOOTER_NOTE, SILENT } from "./common.js";
 
 export const id = "chicken";
 
@@ -34,7 +34,7 @@ RULES
 - You go straight, they swerve: you win 3, they lose 1 (they flinched). (And the reverse.)
 - Both go straight: a collision, both lose 10.
 - The match lasts ${b.totalRounds} rounds. ${FOOTER_NOTE}
-- You cannot talk to the opponent. Your line is spoken to the audience watching.
+- ${SILENT}
 
 ${historyBlock(lines, you, them)}
 

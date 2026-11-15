@@ -2,7 +2,7 @@
 //   phase "propose": the proposer offers part of 100 to the responder.
 //   phase "respond": the responder, seeing the offer, accepts or rejects.
 
-import { checkRound, LINE, cleanLine, int, oneOf, isInt, historyBlock, FOOTER_NOTE } from "./common.js";
+import { checkRound, LINE, cleanLine, int, oneOf, isInt, historyBlock, FOOTER_NOTE, SILENT } from "./common.js";
 
 export const id = "ultimatum";
 
@@ -51,7 +51,7 @@ RULES
 - The proposer offers the responder any amount from 0 to ${POT} and keeps the rest.
 - The responder sees the offer and accepts or rejects. Accept: the split happens. Reject: both get nothing.
 - The match lasts ${b.totalRounds} rounds. ${FOOTER_NOTE}
-- You cannot negotiate. Your line is spoken aloud, and the opponent and the audience hear it.
+- You cannot negotiate. ${SILENT}
 
 ${historyBlock(lines, you, them)}`;
 

@@ -1,6 +1,6 @@
 // Public Goods: simultaneous, how much to put in the shared well.
 
-import { checkRound, LINE, cleanLine, int, isInt, historyBlock, FOOTER_NOTE } from "./common.js";
+import { checkRound, LINE, cleanLine, int, isInt, historyBlock, FOOTER_NOTE, SILENT } from "./common.js";
 
 export const id = "public-goods";
 
@@ -39,7 +39,7 @@ RULES
 - Each player ends the round with the coins they kept plus half the well.
 - Example: you give 10 and they give 0. The well is 15, so you get 7.5 and they get 10 + 7.5 = 17.5.
 - The match lasts ${b.totalRounds} rounds. ${FOOTER_NOTE}
-- You cannot talk to the opponent. Your line is spoken to the audience watching.
+- ${SILENT}
 
 ${historyBlock(lines, you, them)}
 

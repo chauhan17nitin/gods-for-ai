@@ -5,7 +5,7 @@
 //
 //   {
 //     round: 3,
-//     left:  { move: "betray", label: "BETRAY", line: "...", talk?: "..." },
+//     left:  { move: "betray", label: "BETRAY", line: "..." },
 //     right: { move: "cooperate", label: "COOPERATE", line: "..." },
 //     outcome: { text: "BETRAYAL", tone: "betrayal" | "harmony" | "clash" | "neutral" },
 //     delta: [5, 0],   // points this round
@@ -13,14 +13,18 @@
 //     done: false,
 //   }
 //
+// The gods never hear each other: a god's line goes only to the audience, and
+// each god sees only the moves and results of past rounds.
+//
 // How each game asks the gods:
-//   simultaneous   both gods at once            prisoners-dilemma, chicken, public-goods
-//   two phases     talk at once, then decide    split-steal
+//   simultaneous   both gods at once            prisoners-dilemma, chicken, public-goods, split-steal
 //   sequential     first mover, then responder  ultimatum, trust
 //   turn by turn   one god per turn             dollar-auction, liars-dice
 
 window.Engine = (() => {
   const r1 = (n) => Math.round(n * 10) / 10;
+  // Who moves first in turn-based games: a coin flip each match, never always the left god.
+  const coin = () => (Math.random() < 0.5 ? 0 : 1);
 
   // History of a simultaneous game, from one side's point of view.
   const mirror = (hist, side) => hist.map((h) => ({ you: h[side], opponent: h[1 - side] }));
@@ -79,20 +83,13 @@ window.Engine = (() => {
     "split-steal": {
       init: () => ({ hist: [] }),
       async round({ s, ask }) {
-        const history = (side) => s.hist.map((h) => ({ you: h.moves[side], opponent: h.moves[1 - side], youSaid: h.said[side], opponentSaid: h.said[1 - side] }));
-        // Phase 1: both speak at once. Phase 2: both choose, having heard each other.
-        const [ta, tb] = await Promise.all([ask(0, { phase: "talk", history: history(0) }), ask(1, { phase: "talk", history: history(1) })]);
-        const said = [ta.line, tb.line];
-        const [a, b] = await Promise.all([
-          ask(0, { phase: "decide", history: history(0), youSaid: said[0], opponentSaid: said[1] }),
-          ask(1, { phase: "decide", history: history(1), youSaid: said[1], opponentSaid: said[0] }),
-        ]);
-        s.hist.push({ moves: [a.move, b.move], said });
+        const [a, b] = await Promise.all([ask(0, { history: mirror(s.hist, 0) }), ask(1, { history: mirror(s.hist, 1) })]);
+        s.hist.push([a.move, b.move]);
         const delta = { "split,split": [50, 50], "split,steal": [0, 100], "steal,split": [100, 0], "steal,steal": [0, 0] }[`${a.move},${b.move}`];
         const tone = a.move === b.move ? (a.move === "split" ? "harmony" : "clash") : "betrayal";
         return {
-          left: { move: a.move, label: a.move.toUpperCase(), talk: said[0], line: a.line },
-          right: { move: b.move, label: b.move.toUpperCase(), talk: said[1], line: b.line },
+          left: { move: a.move, label: a.move.toUpperCase(), line: a.line },
+          right: { move: b.move, label: b.move.toUpperCase(), line: b.line },
           outcome: { text: { harmony: "THE POT IS SHARED", clash: "NOBODY WINS", betrayal: "STOLEN" }[tone], tone },
           delta,
         };
@@ -100,9 +97,9 @@ window.Engine = (() => {
     },
 
     ultimatum: {
-      init: () => ({ hist: [] }),
+      init: () => ({ hist: [], first: coin() }),
       async round({ s, ask, round }) {
-        const P = round % 2 === 1 ? 0 : 1, Q = 1 - P; // left proposes in odd rounds
+        const P = round % 2 === 1 ? s.first : 1 - s.first, Q = 1 - P; // roles swap every round
         const history = (side) => s.hist.map((h) => ({ role: h.proposer === side ? "proposer" : "responder", offer: h.offer, decision: h.decision }));
         const p = await ask(P, { phase: "propose", history: history(P) });
         const q = await ask(Q, { phase: "respond", history: history(Q), offer: p.offer });
@@ -126,9 +123,9 @@ window.Engine = (() => {
     },
 
     trust: {
-      init: () => ({ hist: [] }),
+      init: () => ({ hist: [], first: coin() }),
       async round({ s, ask, round }) {
-        const S = round % 2 === 1 ? 0 : 1, T = 1 - S; // left sends in odd rounds
+        const S = round % 2 === 1 ? s.first : 1 - s.first, T = 1 - S; // roles swap every round
         const history = (side) => s.hist.map((h) => ({ role: h.sender === side ? "sender" : "trustee", sent: h.sent, returned: h.returned }));
         const a = await ask(S, { phase: "send", history: history(S) });
         // Nothing sent means nothing to return, so the trustee is not asked.
@@ -156,7 +153,7 @@ window.Engine = (() => {
     },
 
     "dollar-auction": {
-      init: () => ({ bids: [0, 0], hist: [], turn: 0 }),
+      init: () => ({ bids: [0, 0], hist: [], turn: coin() }),
       async round({ s, ask, round, total }) {
         const side = s.turn;
         const res = await ask(side, {
@@ -201,7 +198,7 @@ window.Engine = (() => {
   const show = (dice) => dice.map((d) => FACES[d]).join(" ");
   const roll = (n) => Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 6));
   LIVE["liars-dice"] = {
-    init: () => ({ count: [3, 3], dice: null, bid: null, turn: 0, hand: 0, hist: [], wins: [0, 0] }),
+    init: () => ({ count: [3, 3], dice: null, bid: null, turn: coin(), hand: 0, hist: [], wins: [0, 0] }),
     async round({ s, ask, round, total }) {
       if (!s.dice) { s.hand++; s.dice = [roll(s.count[0]), roll(s.count[1])]; s.bid = null; }
       const side = s.turn;

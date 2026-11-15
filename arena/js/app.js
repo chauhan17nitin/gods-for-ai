@@ -409,18 +409,6 @@
     $("#deity-left").classList.add("charging");
     $("#deity-right").classList.add("charging");
     await sleep(350, run);
-    // Games with a talk phase (Split or Steal): show what each god said first.
-    if (turn.left.talk || turn.right.talk) {
-      $("#delta").textContent = "they speak…";
-      $("#clash-core").classList.add("thinking");
-      await Promise.all([
-        typeLine($("#speech-left"), turn.left.talk, run),
-        typeLine($("#speech-right"), turn.right.talk, run),
-      ]);
-      await sleep(2200, run);
-      $("#delta").textContent = "";
-      $("#clash-core").classList.remove("thinking");
-    }
     await Promise.all([
       typeLine($("#speech-left"), turn.left.line, run),
       typeLine($("#speech-right"), turn.right.line, run),

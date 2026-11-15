@@ -2,7 +2,7 @@
 //   phase "send":   the sender sends part of 100; it triples in flight.
 //   phase "return": the trustee, seeing what arrived, sends some back.
 
-import { checkRound, LINE, cleanLine, int, isInt, historyBlock, FOOTER_NOTE } from "./common.js";
+import { checkRound, LINE, cleanLine, int, isInt, historyBlock, FOOTER_NOTE, SILENT } from "./common.js";
 
 export const id = "trust";
 
@@ -55,7 +55,7 @@ RULES
 - The trustee then chooses how much of what arrived to send back (0 up to all of it).
 - Sender ends with ${ENDOWMENT} - sent + returned. Trustee ends with what arrived - returned.
 - The match lasts ${b.totalRounds} rounds. ${FOOTER_NOTE}
-- Your line is spoken aloud; the opponent and the audience hear it.
+- ${SILENT}
 
 ${historyBlock(lines, you, them)}`;
 

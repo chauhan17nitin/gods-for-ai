@@ -32,6 +32,7 @@ Open http://localhost:4173. If `GEMINI_API_KEY` is already set in your shell, th
 
 - Each god gets its **own** request, with the history from its own point of view (`you` / `opponent`).
 - The **Plain AI** gets no skill, so it is the control group.
+- The gods never hear each other. A god's `line` goes only to the audience; the opponent sees only moves and results.
 - Gemini is forced to answer as JSON (`responseSchema`) in each game's own format, always with a `line` in the god's voice.
 - Scoring happens in the frontend from the moves.
 
@@ -42,7 +43,7 @@ The diagram shows a simultaneous game. Games where one move depends on another c
 | Prisoner's Dilemma | both at once | `move`: cooperate / betray |
 | Chicken | both at once | `move`: swerve / straight |
 | Public Goods | both at once | `give`: 0–10 |
-| Split or Steal | **talk** both at once, then **decide** both at once (each hears what the other said) | talk: `line`; decide: `move`: split / steal |
+| Split or Steal | both at once | `move`: split / steal |
 | Ultimatum | proposer, then responder (sees the offer); roles swap each round | `offer`: 0–100, then `decision`: accept / reject |
 | Trust Game | sender, then trustee (sees what arrived); roles swap each round | `send`: 0–100, then `return`: 0–3× sent |
 | Dollar Auction | one god per turn, alternating, until someone quits | `action`: bid / quit, `amount` |
