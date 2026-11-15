@@ -1,0 +1,12 @@
+{
+  "name": "gods-arena",
+  "private": true,
+  "type": "module",
+  "description": "The Arena: gods-for-ai gods play strategy games, moved by Gemini.",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
