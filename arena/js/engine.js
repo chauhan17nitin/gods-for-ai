@@ -17,7 +17,7 @@
 //   simultaneous   both gods at once            prisoners-dilemma, chicken, public-goods
 //   two phases     talk at once, then decide    split-steal
 //   sequential     first mover, then responder  ultimatum, trust
-//   turn by turn   one god per turn             dollar-auction
+//   turn by turn   one god per turn             dollar-auction, liars-dice
 
 window.Engine = (() => {
   const r1 = (n) => Math.round(n * 10) / 10;
@@ -193,6 +193,70 @@ window.Engine = (() => {
           outcome: { text: pyrrhic ? "PYRRHIC VICTORY" : "SOLD", tone: pyrrhic ? "clash" : "harmony" },
         };
       },
+    },
+  };
+
+  // Liar's Dice helpers: the audience sees every die; each god sees only its own.
+  const FACES = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+  const show = (dice) => dice.map((d) => FACES[d]).join(" ");
+  const roll = (n) => Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 6));
+  LIVE["liars-dice"] = {
+    init: () => ({ count: [3, 3], dice: null, bid: null, turn: 0, hand: 0, hist: [], wins: [0, 0] }),
+    async round({ s, ask, round, total }) {
+      if (!s.dice) { s.hand++; s.dice = [roll(s.count[0]), roll(s.count[1])]; s.bid = null; }
+      const side = s.turn;
+      const view = (h) => {
+        const by = h.side === side ? "you" : "opponent";
+        const base = { hand: h.hand, by, action: h.action, quantity: h.quantity, face: h.face };
+        return h.action === "bid" ? base : {
+          ...base, count: h.count, loser: h.loser === side ? "you" : "opponent",
+          yourDice: h.dice[side], opponentDice: h.dice[1 - side],
+        };
+      };
+      const res = await ask(side, {
+        yourDice: s.dice[side],
+        opponentDiceCount: s.dice[1 - side].length,
+        currentBid: s.bid && { quantity: s.bid.quantity, face: s.bid.face, by: s.bid.side === side ? "you" : "opponent" },
+        history: s.hist.map(view),
+      });
+
+      const sides = [];
+      sides[1 - side] = { move: "wait", label: `${s.dice[1 - side].length} DICE`, line: "" };
+      if (res.action === "bid") {
+        const opening = !s.bid;
+        const table = `${show(s.dice[0])}  |  ${show(s.dice[1])}`;
+        s.bid = { quantity: res.quantity, face: res.face, side };
+        s.hist.push({ hand: s.hand, side, action: "bid", quantity: res.quantity, face: res.face });
+        s.turn = 1 - side;
+        sides[side] = { move: "bid", label: `${res.quantity} × ${FACES[res.face]}`, line: res.line };
+        const done = round >= total;
+        return {
+          left: sides[0], right: sides[1], delta: [0, 0], done,
+          outcome: { text: `${table} · ${opening ? `HAND ${s.hand} OPENS` : "THE CLAIM RISES"}`, tone: "neutral" },
+        };
+      }
+
+      // LIAR is called: reveal everything.
+      const { quantity, face } = s.bid;
+      const dice = s.dice;
+      const count = dice.flat().filter((d) => d === face).length;
+      const stands = count >= quantity;
+      const loser = stands ? side : s.bid.side;
+      s.hist.push({ hand: s.hand, side, action: "call", quantity, face, count, loser, dice });
+      s.count[loser]--;
+      s.wins[1 - loser]++;
+      s.dice = null;
+      s.turn = loser; // the loser opens the next hand
+      sides[side] = { move: "call", label: "LIAR!", line: res.line };
+      sides[1 - side].label = `${quantity} × ${FACES[face]}`;
+      const delta = [0, 0];
+      delta[1 - loser] = 1;
+      const reveal = `${show(dice[0])}  |  ${show(dice[1])}  ·  ${count} × ${FACES[face]}`;
+      return {
+        left: sides[0], right: sides[1], delta,
+        done: s.count[loser] === 0 || round >= total,
+        outcome: { text: `${reveal} · ${stands ? "THE CLAIM STANDS" : "CAUGHT LYING"}`, tone: stands ? "clash" : "betrayal" },
+      };
     },
   };
 

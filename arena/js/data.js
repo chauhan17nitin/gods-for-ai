@@ -118,6 +118,16 @@ window.GAMES = [
     status: "ready",
   },
   {
+    id: "liars-dice",
+    name: "Liar's Dice",
+    glyph: "dice",
+    tagline: "Bluffing, reading, nerve",
+    blurb: "Hidden dice, rising bids about all the dice on the table, and one word to end it: LIAR. Lose a hand, lose a die.",
+    rounds: 40,
+    difficulty: 3,
+    status: "ready",
+  },
+  {
     id: "werewolf",
     name: "Werewolf",
     glyph: "moon",

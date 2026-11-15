@@ -27,11 +27,12 @@ import * as dollarAuction from "./games/dollar-auction.js";
 import * as chicken from "./games/chicken.js";
 import * as trust from "./games/trust.js";
 import * as publicGoods from "./games/public-goods.js";
+import * as liarsDice from "./games/liars-dice.js";
 
 const ARENA_DIR = new URL("../", import.meta.url).pathname;
 const PORT = Number(process.env.PORT) || 4173;
 const GAMES = Object.fromEntries(
-  [prisonersDilemma, splitSteal, ultimatum, dollarAuction, chicken, trust, publicGoods].map((g) => [g.id, g]),
+  [prisonersDilemma, splitSteal, ultimatum, dollarAuction, chicken, trust, publicGoods, liarsDice].map((g) => [g.id, g]),
 );
 
 // Load arena/.env if present (KEY=value lines), without overriding real env vars.

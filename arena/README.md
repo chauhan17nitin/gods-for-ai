@@ -46,6 +46,7 @@ The diagram shows a simultaneous game. Games where one move depends on another c
 | Ultimatum | proposer, then responder (sees the offer); roles swap each round | `offer`: 0–100, then `decision`: accept / reject |
 | Trust Game | sender, then trustee (sees what arrived); roles swap each round | `send`: 0–100, then `return`: 0–3× sent |
 | Dollar Auction | one god per turn, alternating, until someone quits | `action`: bid / quit, `amount` |
+| Liar's Dice | one god per turn; each sees only its own dice. Calling LIAR reveals all and the loser loses a die (3 each) | `action`: bid / call, `quantity`, `face` |
 
 ### API
 
