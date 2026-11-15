@@ -55,7 +55,7 @@
           <p class="kicker">Step II · <span id="select-game-name"></span></p>
           <h2 class="heading">Summon Two Gods</h2>
         </div>
-        <span class="head-spacer"></span>
+        <button class="btn-ghost" id="select-howto">? How to play</button>
       </header>
 
       <div class="select-stage">
@@ -120,6 +120,7 @@
           <ol id="chronicle"></ol>
         </div>
         <div class="controls">
+          <button class="btn-ctl" id="ctl-howto" title="How to play">?</button>
           <button class="btn-ctl" id="ctl-play" title="Pause / play (Space)">❚❚</button>
           <button class="btn-ctl" id="ctl-speed" title="Speed">1×</button>
           <button class="btn-ctl" id="ctl-restart" title="Restart">↻</button>
@@ -155,6 +156,12 @@
       </div>
     </section>
   </main>
+
+  <!-- How to play: one popup, filled in for whichever game it is opened for. -->
+  <dialog class="howto" id="howto" aria-labelledby="howto-name">
+    <div class="howto-body" id="howto-body"></div>
+    <button class="btn" id="howto-close"><span>Got it</span></button>
+  </dialog>
 
   <script src="js/data.js"></script>
   <script src="js/art.js"></script>

@@ -92,7 +92,7 @@ Bad JSON or an invalid move from Gemini is retried once. Rate limits (429) and o
 
 1. Add `server/games/<game>.js` exporting `id`, `prepare(body)` (returns `{ prompt, schema }` or `{ error }`) and `parse(data, body)`, and register it in `server/server.js`.
 2. Add an entry to `LIVE` in `js/engine.js` with `init()` and `round({ s, ask, round, total })`, which asks the gods and returns the turn.
-3. Add it to `GAMES` in `js/data.js`.
+3. Add it to `GAMES` in `js/data.js`, with a `howTo` (goal, steps, points, what it shows) for the How to play popup.
 
 ## Adding a god
 

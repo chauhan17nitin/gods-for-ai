@@ -151,6 +151,7 @@ kbd {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px;
   padding: 24px 32px 48px; max-width: 1280px; width: 100%; margin: 0 auto;
 }
+.game-cell { position: relative; display: grid; }
 .game-card {
   --mx: 50%; --my: 50%;
   position: relative; display: flex; flex-direction: column; gap: 8px; text-align: left;
@@ -553,3 +554,39 @@ kbd {
 .clash { grid-template-rows: 1fr auto auto auto; grid-template-areas: ". ." "ml mr" "core core" "strike strike"; }
 .strike { grid-area: strike; display: flex; flex-direction: column; align-items: center; gap: 8px; animation: fade-up 0.4s var(--ease); }
 .btn-strike { padding: 14px 30px; font-size: 0.85rem; animation: portal-pulse 1.6s ease-in-out infinite; }
+
+/* ---------- how to play ---------- */
+.howto-chip {
+  position: absolute; right: 14px; bottom: 14px; z-index: 2;
+  font: 600 0.7rem var(--sans); letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted); background: rgba(3, 2, 10, 0.6); border: 1px solid var(--line);
+  padding: 6px 10px; border-radius: 999px; cursor: pointer;
+  opacity: 0; transition: color 0.3s, border-color 0.3s, transform 0.4s var(--ease);
+}
+.screen.active .howto-chip { animation: card-in 0.7s var(--ease) forwards; animation-delay: calc(0.3s + var(--i) * 0.06s); }
+.howto-chip:hover, .howto-chip:focus-visible { color: var(--gold); border-color: var(--gold); }
+.game-cell:not(.sealed):hover .howto-chip { transform: translateY(-6px); }
+
+.howto {
+  margin: auto; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px);
+  padding: 28px 28px 22px; border-radius: 16px; color: var(--ink);
+  background: radial-gradient(500px circle at 0% 0%, rgba(155, 123, 255, 0.18), transparent 60%), #0b0820;
+  border: 1px solid var(--line); box-shadow: 0 30px 90px -20px rgba(155, 123, 255, 0.55);
+  font-family: var(--sans); overflow: auto;
+}
+.howto::backdrop { background: rgba(3, 2, 10, 0.7); backdrop-filter: blur(4px); }
+.howto[open] { animation: howto-in 0.35s var(--ease); }
+@keyframes howto-in { from { opacity: 0; transform: translateY(16px) scale(0.98); } }
+.howto-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.howto-glyph { width: 48px; height: 48px; flex: none; color: var(--gold); filter: drop-shadow(0 0 10px currentColor); }
+.howto-name { font-family: var(--serif); font-size: 1.6rem; letter-spacing: 0.04em; }
+.howto-goal { font-size: 1.02rem; line-height: 1.5; margin-bottom: 4px; }
+.howto h3 {
+  margin: 18px 0 8px; font: 600 0.7rem var(--sans); letter-spacing: 0.25em; text-transform: uppercase; color: var(--pink);
+}
+.howto ol, .howto ul { padding-left: 20px; display: grid; gap: 6px; }
+.howto li, .howto p { font-size: 0.92rem; line-height: 1.5; color: var(--muted); }
+.howto .howto-goal { color: var(--ink); }
+.howto-tip { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 0.82rem !important; }
+.howto #howto-close { margin-top: 18px; width: 100%; }
+@media (max-width: 520px) { .howto { padding: 22px 18px 18px; } .howto-name { font-size: 1.3rem; } }

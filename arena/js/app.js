@@ -41,7 +41,8 @@
     grid.innerHTML = GAMES.map((g, i) => {
       const sealed = !Engine.isPlayable(g);
       return `
-        <button class="game-card ${sealed ? "sealed" : ""}" data-game="${g.id}" style="--i:${i}" ${sealed ? 'aria-disabled="true"' : ""}>
+       <div class="game-cell ${sealed ? "sealed" : ""}" style="--i:${i}">
+        <button class="game-card ${sealed ? "sealed" : ""}" data-game="${g.id}" ${sealed ? 'aria-disabled="true"' : ""}>
           <span class="game-glyph">${ART.glyph(g.glyph)}</span>
           <span class="game-badge live">${sealed ? "" : "● Live AI"}</span>
           <span class="game-name">${g.name}</span>
@@ -52,8 +53,12 @@
               ? `<b class="seal">Sealed</b> needs a full pantheon`
               : `<b>${g.rounds}</b> rounds · ${"◆".repeat(g.difficulty)}${"◇".repeat(3 - g.difficulty)}`}
           </span>
-        </button>`;
+        </button>
+        ${g.howTo ? `<button class="howto-chip" data-howto="${g.id}" aria-label="How to play ${g.name}">? How to play</button>` : ""}
+       </div>`;
     }).join("");
+
+    $$("[data-howto]", grid).forEach((b) => b.addEventListener("click", () => openHowTo(GAMES.find((g) => g.id === b.dataset.howto))));
 
     $$(".game-card", grid).forEach((card) => {
       card.addEventListener("pointermove", (e) => {
@@ -72,6 +77,34 @@
       });
     });
   }
+
+  // ---------- How to play ----------
+  function openHowTo(g) {
+    if (!g?.howTo) return;
+    const h = g.howTo;
+    $("#howto-body").innerHTML = `
+      <div class="howto-head">
+        <span class="howto-glyph">${ART.glyph(g.glyph)}</span>
+        <div>
+          <p class="kicker">How to play</p>
+          <h2 class="howto-name" id="howto-name">${g.name}</h2>
+        </div>
+      </div>
+      <p class="howto-goal">${h.goal}</p>
+      <h3>Each round</h3>
+      <ol>${h.steps.map((x) => `<li>${x}</li>`).join("")}</ol>
+      <h3>Points</h3>
+      <ul>${h.score.map((x) => `<li>${x}</li>`).join("")}</ul>
+      <h3>What it shows about the gods</h3>
+      <p>${h.reveals}</p>
+      <p class="howto-tip">Each god is a real AI given its beliefs, and decides for itself. Press <kbd>Next Round</kbd> or Enter to play each round.</p>`;
+    $("#howto").showModal();
+  }
+  $("#howto-close").addEventListener("click", () => $("#howto").close());
+  // A click on the dimmed area outside the panel closes it too.
+  $("#howto").addEventListener("click", (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+  $("#select-howto").addEventListener("click", () => openHowTo(app.game));
+  $("#ctl-howto").addEventListener("click", () => openHowTo(app.game));
 
   // ---------- 3. God select ----------
   function openSelect() {
@@ -478,6 +511,7 @@
 
   // Keyboard
   addEventListener("keydown", (e) => {
+    if ($("#howto").open) return; // the popup handles its own keys (Esc closes it)
     const cur = $(".screen.active")?.id;
     if (e.key === "Enter" && cur === "screen-title") $("#enter-btn").click();
     if (e.key === "Enter" && cur === "screen-battle" && strike) { e.preventDefault(); strike(); }

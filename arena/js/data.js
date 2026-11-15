@@ -56,6 +56,20 @@ window.GAMES = [
     rounds: 5,
     difficulty: 1,
     status: "ready",
+    howTo: {
+      goal: "Win the most coins over 5 rounds. Each round there are 100 coins in the pot.",
+      steps: [
+        "Both gods speak first: a promise, a plea or a threat.",
+        "Then each one secretly picks SPLIT or STEAL.",
+        "Both picks are shown at the same time.",
+      ],
+      score: [
+        "Both split: 50 coins each.",
+        "One steals: the stealer takes all 100, the other gets 0.",
+        "Both steal: nobody gets anything.",
+      ],
+      reveals: "Does a god keep its word, and does it believe the other one?",
+    },
   },
   {
     id: "prisoners-dilemma",
@@ -66,6 +80,20 @@ window.GAMES = [
     rounds: 12,
     difficulty: 2,
     status: "ready",
+    howTo: {
+      goal: "Score the most points over 12 rounds.",
+      steps: [
+        "Each round both gods secretly pick COOPERATE or BETRAY.",
+        "Both picks are shown at the same time.",
+        "They remember every past round, so trust is built or broken over time.",
+      ],
+      score: [
+        "Both cooperate: 3 points each.",
+        "One betrays: the betrayer gets 5, the other gets 0.",
+        "Both betray: 1 point each.",
+      ],
+      reveals: "Who betrays first, who strikes back, and who forgives.",
+    },
   },
   {
     id: "ultimatum",
@@ -76,6 +104,19 @@ window.GAMES = [
     rounds: 6,
     difficulty: 1,
     status: "ready",
+    howTo: {
+      goal: "Take home the most coins over 6 rounds.",
+      steps: [
+        "One god gets 100 coins and offers the other a share of it.",
+        "The other god accepts or rejects the offer.",
+        "The roles swap every round.",
+      ],
+      score: [
+        "Accepted: the coins are split as offered.",
+        "Rejected: both get nothing.",
+      ],
+      reveals: "Greed against fairness, and whether pride will turn down free coins.",
+    },
   },
   {
     id: "dollar-auction",
@@ -86,6 +127,20 @@ window.GAMES = [
     rounds: 14,
     difficulty: 2,
     status: "ready",
+    howTo: {
+      goal: "Win a prize worth 100 without paying too much for it.",
+      steps: [
+        "The gods take turns: raise the bid, or quit.",
+        "When one god quits, the other wins the prize.",
+        "There are at most 14 turns.",
+      ],
+      score: [
+        "The winner gets 100 minus their own bid.",
+        "The loser pays their last bid too, and gets nothing.",
+        "So bidding past 100 can still look better than quitting. That is the trap.",
+      ],
+      reveals: "Who knows when to stop, and whose ego keeps bidding.",
+    },
   },
   {
     id: "chicken",
@@ -96,6 +151,19 @@ window.GAMES = [
     rounds: 6,
     difficulty: 2,
     status: "ready",
+    howTo: {
+      goal: "Score the most points over 6 rounds.",
+      steps: [
+        "Two gods charge at each other.",
+        "Each one secretly picks SWERVE or go STRAIGHT.",
+      ],
+      score: [
+        "Both swerve: 0 each.",
+        "One goes straight: they get 3, the one who swerved loses 1.",
+        "Both go straight: they collide, and both lose 10.",
+      ],
+      reveals: "Ego against survival: who backs down, and who would rather crash.",
+    },
   },
   {
     id: "trust",
@@ -106,6 +174,19 @@ window.GAMES = [
     rounds: 6,
     difficulty: 2,
     status: "ready",
+    howTo: {
+      goal: "End with the most coins after 6 rounds.",
+      steps: [
+        "The sender starts with 100 coins and sends any part of it.",
+        "Whatever is sent triples on the way.",
+        "The receiver decides how much to send back. The roles swap every round.",
+      ],
+      score: [
+        "Sender: 100, minus what they sent, plus what came back.",
+        "Receiver: three times what was sent, minus what they gave back.",
+      ],
+      reveals: "Will a god trust, and will it repay trust or pocket it?",
+    },
   },
   {
     id: "public-goods",
@@ -116,6 +197,19 @@ window.GAMES = [
     rounds: 8,
     difficulty: 2,
     status: "ready",
+    howTo: {
+      goal: "End with the most coins after 8 rounds.",
+      steps: [
+        "Each god gets 10 coins and secretly puts any amount into a shared well.",
+        "The well grows by half, and is split evenly between both gods.",
+        "Each god keeps whatever it didn't put in.",
+      ],
+      score: [
+        "Both giving everything: 15 each, the best shared result.",
+        "Giving nothing while the other gives everything: you get 17.5, they get 7.5.",
+      ],
+      reveals: "Who carries the group, and who rides free on the other.",
+    },
   },
   {
     id: "liars-dice",
@@ -126,6 +220,20 @@ window.GAMES = [
     rounds: 40,
     difficulty: 3,
     status: "ready",
+    howTo: {
+      goal: "Be the last god with dice. Each god starts with 3.",
+      steps: [
+        "Every hand, both gods roll their dice in secret. Each sees only its own. You see all of them.",
+        "They take turns making a claim about ALL the dice on the table, like \"at least 3 fives\". Each claim must be higher than the last.",
+        "Claims can be bluffs. Instead of raising, a god can call LIAR.",
+        "On LIAR every die is shown. If the claim was true, the caller loses a die. If it was false, the claimer loses one.",
+      ],
+      score: [
+        "Each hand won is 1 point.",
+        "Lose all your dice and you lose the match.",
+      ],
+      reveals: "Who bluffs, who can tell, and who keeps a straight face.",
+    },
   },
   {
     id: "werewolf",
