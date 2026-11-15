@@ -272,6 +272,9 @@ window.Engine = (() => {
     if ((res.status === 404 || res.status === 405) && !data.error) {
       throw new Error("This page isn't served by the Arena server, so there is no /api/move here. Run npm start in arena/ and open http://localhost:4173");
     }
+    if (res.status === 429 && !data.error) {
+      throw new Error("Too many moves from your network. Wait a minute, then press Next Round again.");
+    }
     if (!res.ok) throw new Error(`${god.name}: ${data.error || `HTTP ${res.status}`}`);
     return data;
   }

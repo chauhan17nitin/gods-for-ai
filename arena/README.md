@@ -1,5 +1,7 @@
 # The Arena
 
+**Live:** https://gods-for-ai.vercel.app/
+
 A game-style UI where two gods face each other in a strategy game. See [../ARENA.md](../ARENA.md) for the games and why they matter.
 
 **Every game is live:** each god's move comes from Gemini with the god's skill loaded. Each round starts when you click **Next Round** or press Enter.
@@ -35,7 +37,7 @@ vercel --prod                   # production
 
 Or import the GitHub repo at vercel.com/new: keep the root directory as the repo root and add `GEMINI_API_KEY` under Environment Variables.
 
-`/api/move` is public, so anyone with the URL can spend your Gemini quota.
+`/api/move` is public, so anyone with the URL can spend your Gemini quota. A Vercel Firewall rule limits it to 10 POSTs per minute per IP (over that: 429, shown in the UI as "Too many moves"). Manage it with `vercel firewall rules list`.
 
 ## How a live round works
 
