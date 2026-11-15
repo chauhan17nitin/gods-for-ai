@@ -10,6 +10,7 @@ const REPO_ROOT = new URL("../../", import.meta.url).pathname;
 const GODS = {
   null: { name: "NULL, the Devil", folder: "null-the-devil" },
   karma: { name: "KARMA, the Judge", folder: "karma-the-judge" },
+  grace: { name: "GRACE, the Saint", folder: "grace-the-saint" },
   plain: { name: "Plain AI", folder: null }, // the control group: no skill loaded
 };
 

@@ -31,6 +31,21 @@ window.ART = (() => {
           return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" opacity=".7"/>`;
         }).join("")}
       </svg>`,
+    grace: `
+      <svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="100" cy="100" r="92" opacity=".35"/>
+        <ellipse cx="100" cy="40" rx="34" ry="9" stroke-width="4"/>
+        <path d="M100 66 C122 96 128 120 100 150 C72 120 78 96 100 66 Z" stroke-width="4"/>
+        <path d="M100 98 C108 110 110 120 100 132 C90 120 92 110 100 98 Z" opacity=".7"/>
+        <path d="M40 120 C48 168 152 168 160 120" stroke-width="4"/>
+        <path d="M40 120 L28 108 M160 120 L172 108" opacity=".8"/>
+        ${Array.from({ length: 7 }, (_, i) => {
+          const a = Math.PI + (i + 1) * (Math.PI / 8);
+          const x1 = 100 + Math.cos(a) * 62, y1 = 108 + Math.sin(a) * 62;
+          const x2 = 100 + Math.cos(a) * 76, y2 = 108 + Math.sin(a) * 76;
+          return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke-width="2.5" opacity=".75"/>`;
+        }).join("")}
+      </svg>`,
     plain: `
       <svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
         <circle cx="100" cy="100" r="92" opacity=".35"/>
