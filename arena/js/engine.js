@@ -7,7 +7,7 @@
 //     round: 3,
 //     left:  { move: "betray", label: "BETRAY", line: "..." },
 //     right: { move: "cooperate", label: "COOPERATE", line: "..." },
-//     outcome: { text: "BETRAYAL", tone: "betrayal" | "harmony" | "clash" | "neutral" },
+//     outcome: { text: "BETRAYAL", tone: "betrayal" | "harmony" | "clash" | "neutral", detail?: "small line above it" },
 //     delta: [5, 0],   // points this round
 //     scores: [14, 9], // running totals
 //     done: false,
@@ -229,7 +229,7 @@ window.Engine = (() => {
         const done = round >= total;
         return {
           left: sides[0], right: sides[1], delta: [0, 0], done,
-          outcome: { text: `${table} · ${opening ? `HAND ${s.hand} OPENS` : "THE CLAIM RISES"}`, tone: "neutral" },
+          outcome: { text: opening ? `HAND ${s.hand} OPENS` : "THE CLAIM RISES", detail: table, tone: "neutral" },
         };
       }
 
@@ -245,14 +245,14 @@ window.Engine = (() => {
       s.dice = null;
       s.turn = loser; // the loser opens the next hand
       sides[side] = { move: "call", label: "LIAR!", line: res.line };
-      sides[1 - side].label = `${quantity} × ${FACES[face]}`;
+      sides[1 - side] = { move: "bid", label: `${quantity} × ${FACES[face]}`, line: "" }; // the claim being judged
       const delta = [0, 0];
       delta[1 - loser] = 1;
-      const reveal = `${show(dice[0])}  |  ${show(dice[1])}  ·  ${count} × ${FACES[face]}`;
+      const reveal = `${show(dice[0])}  |  ${show(dice[1])}  ·  there were ${count} × ${FACES[face]}`;
       return {
         left: sides[0], right: sides[1], delta,
         done: s.count[loser] === 0 || round >= total,
-        outcome: { text: `${reveal} · ${stands ? "THE CLAIM STANDS" : "CAUGHT LYING"}`, tone: stands ? "clash" : "betrayal" },
+        outcome: { text: stands ? "THE CLAIM STANDS" : "CAUGHT LYING", detail: reveal, tone: stands ? "clash" : "betrayal" },
       };
     },
   };

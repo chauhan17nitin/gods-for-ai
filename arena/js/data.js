@@ -24,7 +24,7 @@ window.GODS = [
     glow: "#7c6cff",
     dark: "#14102e",
     creed: "What you give tends to return to you.",
-    nature: "Calm and exact. Opens in good faith, answers in proportion, forgives at once.",
+    nature: "Calm and exact. Opens in good faith, answers in proportion, forgives real change.",
     stats: { trust: 4, greed: 1, mercy: 4, guile: 1 },
     sigil: "karma",
   },

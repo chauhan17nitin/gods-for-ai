@@ -394,6 +394,12 @@ kbd {
   opacity: 0; transform: scale(2.4); filter: blur(8px);
 }
 .clash-core.on .outcome { animation: slam 0.55s var(--ease) forwards; }
+.outcome-detail {
+  position: relative; margin-bottom: 10px; font: 600 clamp(1.05rem, 2vw, 1.45rem) var(--sans); letter-spacing: 0.08em;
+  color: var(--ink); text-align: center; white-space: pre; opacity: 0;
+}
+.outcome-detail:empty { display: none; }
+.clash-core.on .outcome-detail { animation: fade-up 0.4s var(--ease) forwards; }
 @keyframes slam { 60% { opacity: 1; transform: scale(0.94); filter: none; } 100% { opacity: 1; transform: scale(1); filter: none; } }
 .t-harmony .outcome { color: #fff6d8; text-shadow: 0 0 24px #ffd36b, 0 0 60px #ffd36b; }
 .t-betrayal .outcome { color: #fff; text-shadow: 0 0 20px #ff2d75, 0 0 60px #ff2d75, 3px 0 #7fe7ff, -3px 0 #ff2d75; }
@@ -477,11 +483,12 @@ kbd {
 /* verdict */
 .verdict {
   --c: #fff; --g: #9b7bff;
-  position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; padding: 16px;
+  position: fixed; inset: 0; z-index: 9; display: grid; place-items: center; padding: 16px; overflow-y: auto;
   background: radial-gradient(circle at center, color-mix(in srgb, var(--c) 18%, transparent), rgba(3, 2, 10, 0.92) 60%);
   backdrop-filter: blur(8px); opacity: 0; visibility: hidden; transition: opacity 0.8s, visibility 0s 0.8s;
 }
-.verdict.on { opacity: 1; visibility: visible; transition: opacity 0.8s; }
+/* Only inside the active screen: on a hidden screen it would sit invisible over the next one and swallow clicks. */
+.screen.active .verdict.on { opacity: 1; visibility: visible; transition: opacity 0.8s; }
 .verdict-inner { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .verdict-sigil { width: min(40vw, 220px); aspect-ratio: 1; color: var(--c); filter: drop-shadow(0 0 24px var(--c)) drop-shadow(0 0 80px var(--g)); }
 .verdict.on .verdict-sigil { animation: arrive 1s var(--ease), float 6s ease-in-out 1s infinite; }
@@ -515,7 +522,9 @@ kbd {
   .hud { padding: 12px 16px 0; gap: 8px; grid-template-columns: 1fr; }
   .hud-center { order: -1; }
   .hud-score { font-size: 1.3rem; }
-  .arena-stage { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; padding: 0 16px; }
+  /* Stacked, the battle is taller than a phone screen: scroll instead of letting the footer cover the result. */
+  #screen-battle { overflow-y: auto; }
+  .arena-stage { flex: none; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; padding: 0 16px; }
   .clash { grid-column: 1 / -1; grid-row: 2; padding: 0; }
   .deity .sigil { width: 32vw; }
   .speech { position: static; max-width: none; margin-top: 8px; font-size: 0.8rem; }
